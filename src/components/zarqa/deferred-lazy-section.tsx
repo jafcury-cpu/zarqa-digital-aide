@@ -2,11 +2,12 @@ import { ComponentType, LazyExoticComponent, Suspense, useEffect, useRef, useSta
 import { LoadingPanel } from "@/components/zarqa/loading-panel";
 
 type DeferredLazySectionProps = {
-  component: LazyExoticComponent<ComponentType>;
+  component: LazyExoticComponent<ComponentType<any>>;
+  componentProps?: Record<string, unknown>;
   minHeightClassName?: string;
 };
 
-export function DeferredLazySection({ component: Component, minHeightClassName = "min-h-[320px]" }: DeferredLazySectionProps) {
+export function DeferredLazySection({ component: Component, componentProps, minHeightClassName = "min-h-[320px]" }: DeferredLazySectionProps) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [shouldRender, setShouldRender] = useState(false);
 
@@ -33,7 +34,7 @@ export function DeferredLazySection({ component: Component, minHeightClassName =
     <div ref={containerRef} className={minHeightClassName}>
       {shouldRender ? (
         <Suspense fallback={<LoadingPanel lines={4} />}>
-          <Component />
+          <Component {...componentProps} />
         </Suspense>
       ) : (
         <LoadingPanel lines={4} />
