@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { BellRing, Link2, Save } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { SectionCard } from "@/components/zarqa/section-card";
@@ -8,6 +8,22 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { cn } from "@/lib/utils";
+
+function validateWebhookUrl(value: string) {
+  if (!value.trim()) return null;
+
+  try {
+    const parsedUrl = new URL(value);
+    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
+      return "Use uma URL iniciando com http:// ou https://.";
+    }
+
+    return null;
+  } catch {
+    return "Informe uma webhook URL válida.";
+  }
+}
 
 const Configuracoes = () => {
   const { user } = useAuth();
@@ -16,6 +32,7 @@ const Configuracoes = () => {
   const [timezone, setTimezone] = useState("America/Sao_Paulo");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const webhookError = useMemo(() => validateWebhookUrl(webhookUrl), [webhookUrl]);
 
   useEffect(() => {
     if (!user) return;
@@ -38,6 +55,11 @@ const Configuracoes = () => {
   const handleSave = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!user) return;
+
+    if (webhookError) {
+      toast({ variant: "destructive", title: "Webhook inválido", description: webhookError });
+      return;
+    }
 
     setSaving(true);
     const { error } = await supabase.from("settings").upsert(
@@ -68,8 +90,12 @@ const Configuracoes = () => {
               onChange={(event) => setWebhookUrl(event.target.value)}
               placeholder="https://seu-n8n/webhook/zarqa"
               disabled={loading}
+              aria-invalid={Boolean(webhookError)}
+              className={cn(webhookError && "border-destructive focus-visible:ring-destructive")}
             />
-            <p className="text-sm text-muted-foreground">Usado pelo chat para enviar POST ao workflow do n8n.</p>
+            <p className={cn("text-sm", webhookError ? "text-destructive" : "text-muted-foreground")}>
+              {webhookError || "Usado pelo chat para enviar POST ao workflow do n8n."}
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -86,7 +112,7 @@ const Configuracoes = () => {
             </Select>
           </div>
 
-          <Button type="submit" variant="hero" disabled={saving}>
+          <Button type="submit" variant="hero" disabled={saving || loading || Boolean(webhookError)}>
             <Save className="size-4" />
             {saving ? "Salvando..." : "Salvar configurações"}
           </Button>
