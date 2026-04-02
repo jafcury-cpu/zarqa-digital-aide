@@ -1,32 +1,60 @@
 import { useEffect, useState } from "react";
 import { Activity, ArrowUpRight, CalendarClock, FileWarning, Siren, WalletCards } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
+import { useAuth } from "@/components/auth/auth-provider";
 import { LoadingPanel } from "@/components/zarqa/loading-panel";
 import { SectionCard } from "@/components/zarqa/section-card";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { useSaoPauloTime } from "@/hooks/use-sao-paulo-time";
+import { getDashboardData, getFallbackDashboardData, type DashboardData } from "@/lib/zarqa-cloud-data";
 import {
-  activeAlerts,
   briefingText,
   formatCurrency,
   formatDate,
   getPriorityVariant,
   getStatusVariant,
-  healthSnapshot,
-  healthSparkline,
   priorityLabel,
   upcomingAppointments,
-  upcomingBills,
 } from "@/lib/zarqa-mocks";
 
 const Dashboard = () => {
+  const { user } = useAuth();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [dashboardData, setDashboardData] = useState<DashboardData>(getFallbackDashboardData());
   const { full, short } = useSaoPauloTime();
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setLoading(false), 900);
-    return () => window.clearTimeout(timer);
-  }, []);
+    if (!user) return;
+
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await getDashboardData(user.id);
+        if (!cancelled) setDashboardData(data);
+      } catch (error) {
+        if (!cancelled) {
+          setDashboardData(getFallbackDashboardData());
+          toast({
+            variant: "destructive",
+            title: "Falha ao carregar dashboard",
+            description: error instanceof Error ? error.message : "Usando dados de demonstração locais.",
+          });
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    void load();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [toast, user]);
 
   if (loading) {
     return (
@@ -99,7 +127,7 @@ const Dashboard = () => {
         <SectionCard title="Alertas Ativos" description="Sinais operacionais abertos" eyebrow="Risk radar" className="xl:col-span-3">
           {/* TODO: conectar com n8n webhook */}
           <div className="space-y-3">
-            {activeAlerts.map((alert) => (
+             {dashboardData.activeAlerts.map((alert) => (
               <div key={alert.id} className="rounded-xl border border-border bg-panel-elevated p-3">
                 <div className="mb-2 flex items-center justify-between gap-3">
                   <span className="text-sm font-medium text-foreground">{alert.module}</span>
@@ -119,11 +147,11 @@ const Dashboard = () => {
         >
           {/* TODO: conectar com n8n webhook */}
           <div className="space-y-3">
-            {upcomingBills.map((bill) => (
+             {dashboardData.upcomingBills.map((bill) => (
               <div key={bill.id} className="grid gap-3 rounded-xl border border-border bg-panel-elevated p-4 md:grid-cols-[1fr_auto_auto] md:items-center">
                 <div>
                   <p className="font-medium text-foreground">{bill.description}</p>
-                  <p className="text-sm text-muted-foreground">Vence em {formatDate(bill.dueDate)}</p>
+                   <p className="text-sm text-muted-foreground">Vence em {formatDate(bill.dueDate)}</p>
                 </div>
                 <p className="font-display text-lg text-foreground">{formatCurrency(bill.amount)}</p>
                 <Badge variant={getStatusVariant(bill.status)}>{bill.status}</Badge>
@@ -143,14 +171,14 @@ const Dashboard = () => {
           <div className="space-y-4">
             <div className="flex items-end justify-between">
               <div>
-                <p className="font-display text-6xl leading-none text-foreground">{healthSnapshot.overallScore}</p>
+                 <p className="font-display text-6xl leading-none text-foreground">{dashboardData.healthSnapshot.overallScore}</p>
                 <p className="mt-2 text-sm text-muted-foreground">Consistência acima da média semanal</p>
               </div>
               <ArrowUpRight className="size-5 text-success" />
             </div>
             <div className="h-20 rounded-xl border border-border bg-panel-elevated px-2 py-1">
               <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={healthSparkline.map((score, index) => ({ index, score }))}>
+                 <LineChart data={dashboardData.healthSparkline.map((score, index) => ({ index, score }))}>
                   <Line type="monotone" dataKey="score" stroke="hsl(var(--accent-blue))" strokeWidth={2.5} dot={false} />
                 </LineChart>
               </ResponsiveContainer>
@@ -165,7 +193,7 @@ const Dashboard = () => {
                 <WalletCards className="size-4 text-primary" />
                 <div>
                   <p className="text-sm text-muted-foreground">Caixa comprometido</p>
-                  <p className="font-display text-2xl text-foreground">38%</p>
+                   <p className="font-display text-2xl text-foreground">{dashboardData.pulse.cashCommitted}%</p>
                 </div>
               </div>
             </div>
@@ -174,7 +202,7 @@ const Dashboard = () => {
                 <Siren className="size-4 text-warning" />
                 <div>
                   <p className="text-sm text-muted-foreground">Itens urgentes</p>
-                  <p className="font-display text-2xl text-foreground">03</p>
+                   <p className="font-display text-2xl text-foreground">{String(dashboardData.pulse.urgentItems).padStart(2, "0")}</p>
                 </div>
               </div>
             </div>
@@ -183,7 +211,7 @@ const Dashboard = () => {
                 <FileWarning className="size-4 text-accent-blue" />
                 <div>
                   <p className="text-sm text-muted-foreground">Revisões documentais</p>
-                  <p className="font-display text-2xl text-foreground">02</p>
+                   <p className="font-display text-2xl text-foreground">{String(dashboardData.pulse.documentReviews).padStart(2, "0")}</p>
                 </div>
               </div>
             </div>
