@@ -31,6 +31,38 @@ function sanitizeMessages(rows: Array<{ id: string; role: string; content: strin
   return (rows ?? []).filter((row): row is MessageRow => isValidMessageRole(row.role));
 }
 
+function getFriendlyWebhookError(error: unknown) {
+  const rawMessage = error instanceof Error ? error.message.toLowerCase() : "";
+
+  if (
+    rawMessage.includes("timeouterror") ||
+    rawMessage.includes("504") ||
+    rawMessage.includes("timeout")
+  ) {
+    return "O webhook demorou demais para responder. Tente novamente em instantes.";
+  }
+
+  if (
+    rawMessage.includes("allowlist") ||
+    rawMessage.includes("domínio do webhook não está na allowlist") ||
+    rawMessage.includes("domínio do webhook não é permitido")
+  ) {
+    return "O domínio configurado para o webhook está bloqueado por segurança. Revise a URL em Configurações.";
+  }
+
+  if (
+    rawMessage.includes("failed to fetch") ||
+    rawMessage.includes("network") ||
+    rawMessage.includes("non-2xx") ||
+    rawMessage.includes("webhook retornou") ||
+    rawMessage.includes("falha ao acionar o backend do chat")
+  ) {
+    return "O webhook está indisponível no momento. Verifique se ele está online e tente novamente.";
+  }
+
+  return error instanceof Error ? error.message : "A resposta não pôde ser concluída.";
+}
+
 const Chat = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -132,7 +164,7 @@ const Chat = () => {
       toast({
         variant: "destructive",
         title: "Erro no webhook",
-        description: error instanceof Error ? error.message : "A resposta não pôde ser concluída.",
+        description: getFriendlyWebhookError(error),
       });
     } finally {
       setSending(false);
