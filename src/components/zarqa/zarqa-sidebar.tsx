@@ -126,10 +126,11 @@ export function ZarqaSidebar() {
           </div>
         ) : null}
         <Button
-          variant="ghost"
-          className="justify-start text-sidebar-foreground hover:bg-sidebar-accent"
+          variant="secondary"
+          className="w-full justify-start bg-sidebar-primary text-sidebar-primary-foreground shadow-glow hover:bg-sidebar-primary/90"
           onClick={handleSignOut}
           disabled={signingOut}
+          title="Encerrar sessão"
         >
           <LogOut />
           {!collapsed ? <span>{signingOut ? "Saindo..." : "Sair"}</span> : null}

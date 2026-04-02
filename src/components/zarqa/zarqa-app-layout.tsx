@@ -1,4 +1,6 @@
 import { Outlet, useLocation } from "react-router-dom";
+import { useAuth } from "@/components/auth/auth-provider";
+import { Badge } from "@/components/ui/badge";
 import { ZarqaSidebar } from "@/components/zarqa/zarqa-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
@@ -13,6 +15,7 @@ const labels: Record<string, { title: string; subtitle: string }> = {
 
 export function ZarqaAppLayout() {
   const location = useLocation();
+  const { user } = useAuth();
   const current = labels[location.pathname] ?? labels["/dashboard"];
 
   return (
@@ -28,7 +31,15 @@ export function ZarqaAppLayout() {
                 <h1 className="text-lg font-semibold tracking-tight text-foreground">{current.title}</h1>
               </div>
             </div>
-            <p className="hidden text-sm text-muted-foreground md:block">{current.subtitle}</p>
+            <div className="flex items-center gap-3">
+              <div className="hidden text-right md:block">
+                <p className="text-sm text-muted-foreground">{current.subtitle}</p>
+                <p className="truncate text-xs text-foreground/80">{user?.email}</p>
+              </div>
+              <Badge variant="info" className="hidden md:inline-flex">
+                Sessão ativa
+              </Badge>
+            </div>
           </header>
           <main className="flex-1 px-4 py-4 md:px-6 md:py-6">
             <Outlet />
