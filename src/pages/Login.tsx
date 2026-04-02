@@ -1,6 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Lock, Mail, ShieldCheck } from "lucide-react";
-import { Navigate, useLocation } from "react-router-dom";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -15,6 +15,7 @@ const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [sendingReset, setSendingReset] = useState(false);
   const redirectTo = typeof location.state?.from === "string" ? location.state.from : "/dashboard";
 
   if (user) {
@@ -42,6 +43,37 @@ const Login = () => {
       description: "Acesso liberado ao painel ZARQA.",
     });
     setSubmitting(false);
+  };
+
+  const handleResetPassword = async () => {
+    if (!email.trim()) {
+      toast({
+        variant: "destructive",
+        title: "Informe seu email",
+        description: "Preencha o campo de email para receber o link de recuperação.",
+      });
+      return;
+    }
+
+    setSendingReset(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    if (error) {
+      toast({
+        variant: "destructive",
+        title: "Falha ao enviar email",
+        description: error.message,
+      });
+    } else {
+      toast({
+        title: "Email enviado",
+        description: "Verifique sua caixa de entrada para redefinir a senha.",
+      });
+    }
+
+    setSendingReset(false);
   };
 
   return (
@@ -102,10 +134,18 @@ const Login = () => {
                   required
                 />
               </div>
+              <div className="flex justify-end">
+                <Button type="button" variant="link" className="h-auto px-0 text-sm" onClick={handleResetPassword} disabled={sendingReset}>
+                  {sendingReset ? "Enviando link..." : "Esqueci minha senha"}
+                </Button>
+              </div>
               <Button type="submit" variant="hero" size="lg" className="w-full" disabled={submitting}>
                 {submitting ? "Autenticando..." : "Entrar"}
               </Button>
               <p className="text-center text-sm text-muted-foreground">Cadastro público desativado para operação pessoal segura.</p>
+              <p className="text-center text-xs text-muted-foreground">
+                Ao receber o email, abra o link seguro para criar uma nova senha.
+              </p>
             </form>
           </CardContent>
         </Card>

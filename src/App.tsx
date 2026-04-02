@@ -12,6 +12,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 const Index = lazy(() => import("./pages/Index.tsx"));
 const Login = lazy(() => import("./pages/Login.tsx"));
+const ResetPassword = lazy(() => import("./pages/ResetPassword.tsx"));
 const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
 const Chat = lazy(() => import("./pages/Chat.tsx"));
 const Financeiro = lazy(() => import("./pages/Financeiro.tsx"));
@@ -43,6 +44,7 @@ const App = () => (
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
                 <Route
                   element={
                     <ProtectedRoute>
