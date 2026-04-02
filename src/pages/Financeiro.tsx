@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { lazy, useEffect, useMemo, useState } from "react";
+import { DeferredLazySection } from "@/components/zarqa/deferred-lazy-section";
 import { LoadingPanel } from "@/components/zarqa/loading-panel";
 import { SectionCard } from "@/components/zarqa/section-card";
 import { Badge } from "@/components/ui/badge";
@@ -37,6 +37,7 @@ const Financeiro = () => {
 
   const totalBalance = financeTransactions.reduce((acc, item) => acc + item.amount, 0);
   const upcomingSevenDays = upcomingBills.slice(0, 3);
+  const FinanceCategoryChart = lazy(() => import("@/components/zarqa/finance-category-chart"));
 
   if (loading) {
     return (
@@ -68,26 +69,8 @@ const Financeiro = () => {
       </SectionCard>
 
       <SectionCard title="Gastos por Categoria" description="Últimos 30 dias" eyebrow="Allocation view" className="xl:col-span-8">
-        <div className="h-[320px] rounded-2xl border border-border bg-panel-elevated p-4">
-          {/* TODO: conectar com n8n webhook */}
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={financeCategoryData} margin={{ top: 16, right: 12, left: -10, bottom: 0 }}>
-              <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
-              <XAxis dataKey="category" stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
-              <YAxis stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => `R$${value / 1000}k`} tickLine={false} axisLine={false} />
-              <Tooltip
-                cursor={{ fill: "hsl(var(--panel))" }}
-                contentStyle={{
-                  background: "hsl(var(--panel))",
-                  border: "1px solid hsl(var(--border))",
-                  borderRadius: "16px",
-                  color: "hsl(var(--foreground))",
-                }}
-              />
-              <Bar dataKey="total" fill="hsl(var(--primary))" radius={[10, 10, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
+        {/* TODO: conectar com n8n webhook */}
+        <DeferredLazySection component={FinanceCategoryChart} minHeightClassName="min-h-[320px]" />
       </SectionCard>
 
       <SectionCard title="Transações Recentes" description="Busca e filtro operacional" eyebrow="Ledger" className="xl:col-span-8">
