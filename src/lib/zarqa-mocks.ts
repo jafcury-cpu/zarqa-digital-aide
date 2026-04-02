@@ -63,9 +63,30 @@ export const healthSnapshot = {
 };
 
 export const fallbackDocuments = [
-  { id: "doc-1", name: "Contrato Locação Itaim.pdf", category: "Jurídico", created_at: "2026-03-30T10:30:00Z", preview: "Contrato principal com aditivos e garantias." },
-  { id: "doc-2", name: "Apólice Saúde Familiar.pdf", category: "Saúde", created_at: "2026-03-29T18:00:00Z", preview: "Coberturas, carências e contatos prioritários." },
-  { id: "doc-3", name: "Relatório Patrimonial Março.xlsx", category: "Financeiro", created_at: "2026-03-27T08:45:00Z", preview: "Resumo mensal de posições, liquidez e obrigações." },
+  {
+    id: "doc-1",
+    name: "Contrato Locação Itaim.pdf",
+    category: "Jurídico",
+    file_url: "",
+    created_at: "2026-03-30T10:30:00Z",
+    preview: "Contrato principal com aditivos e garantias.",
+  },
+  {
+    id: "doc-2",
+    name: "Apólice Saúde Familiar.pdf",
+    category: "Saúde",
+    file_url: "",
+    created_at: "2026-03-29T18:00:00Z",
+    preview: "Coberturas, carências e contatos prioritários.",
+  },
+  {
+    id: "doc-3",
+    name: "Relatório Patrimonial Março.xlsx",
+    category: "Financeiro",
+    file_url: "",
+    created_at: "2026-03-27T08:45:00Z",
+    preview: "Resumo mensal de posições, liquidez e obrigações.",
+  },
 ];
 
 export function formatCurrency(value: number) {
