@@ -1,5 +1,7 @@
-import { useLocation } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { Button } from "@/components/ui/button";
 
 const NotFound = () => {
   const location = useLocation();
@@ -9,13 +11,21 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted">
-      <div className="text-center">
-        <h1 className="mb-4 text-4xl font-bold">404</h1>
-        <p className="mb-4 text-xl text-muted-foreground">Oops! Page not found</p>
-        <a href="/" className="text-primary underline hover:text-primary/90">
-          Return to Home
-        </a>
+    <div className="grid min-h-screen place-items-center bg-background px-6">
+      <div className="surface-elevated grid max-w-xl gap-5 p-8 text-center">
+        <span className="text-kicker">Erro de Roteamento</span>
+        <h1 className="text-5xl font-semibold tracking-tight text-foreground">404</h1>
+        <p className="text-muted-foreground">
+          A rota <span className="font-mono text-foreground">{location.pathname}</span> não existe na malha da ZARQA.
+        </p>
+        <div className="flex justify-center">
+          <Button asChild variant="hero">
+            <a href="/dashboard">
+              <ArrowLeft />
+              Voltar ao painel
+            </a>
+          </Button>
+        </div>
       </div>
     </div>
   );
