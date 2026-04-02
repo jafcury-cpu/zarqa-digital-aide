@@ -1,23 +1,35 @@
+import { lazy, Suspense } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { ThemeProvider } from "@/components/theme-provider";
+import { LoadingPanel } from "@/components/zarqa/loading-panel";
 import { ZarqaAppLayout } from "@/components/zarqa/zarqa-app-layout";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import Chat from "./pages/Chat.tsx";
-import Configuracoes from "./pages/Configuracoes.tsx";
-import Dashboard from "./pages/Dashboard.tsx";
-import Documentos from "./pages/Documentos.tsx";
-import Financeiro from "./pages/Financeiro.tsx";
-import Index from "./pages/Index.tsx";
-import Login from "./pages/Login.tsx";
-import NotFound from "./pages/NotFound.tsx";
-import Saude from "./pages/Saude.tsx";
+
+const Index = lazy(() => import("./pages/Index.tsx"));
+const Login = lazy(() => import("./pages/Login.tsx"));
+const Dashboard = lazy(() => import("./pages/Dashboard.tsx"));
+const Chat = lazy(() => import("./pages/Chat.tsx"));
+const Financeiro = lazy(() => import("./pages/Financeiro.tsx"));
+const Saude = lazy(() => import("./pages/Saude.tsx"));
+const Documentos = lazy(() => import("./pages/Documentos.tsx"));
+const Configuracoes = lazy(() => import("./pages/Configuracoes.tsx"));
+const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
 const queryClient = new QueryClient();
+
+const routeFallback = (
+  <div className="min-h-screen bg-background px-4 py-6 md:px-6">
+    <div className="mx-auto max-w-6xl space-y-4">
+      <LoadingPanel lines={5} />
+      <LoadingPanel lines={3} />
+    </div>
+  </div>
+);
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -27,25 +39,27 @@ const App = () => (
           <Toaster />
           <Sonner />
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/login" element={<Login />} />
-              <Route
-                element={
-                  <ProtectedRoute>
-                    <ZarqaAppLayout />
-                  </ProtectedRoute>
-                }
-              >
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/chat" element={<Chat />} />
-                <Route path="/financeiro" element={<Financeiro />} />
-                <Route path="/saude" element={<Saude />} />
-                <Route path="/documentos" element={<Documentos />} />
-                <Route path="/configuracoes" element={<Configuracoes />} />
-              </Route>
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <Suspense fallback={routeFallback}>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/login" element={<Login />} />
+                <Route
+                  element={
+                    <ProtectedRoute>
+                      <ZarqaAppLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/chat" element={<Chat />} />
+                  <Route path="/financeiro" element={<Financeiro />} />
+                  <Route path="/saude" element={<Saude />} />
+                  <Route path="/documentos" element={<Documentos />} />
+                  <Route path="/configuracoes" element={<Configuracoes />} />
+                </Route>
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </Suspense>
           </BrowserRouter>
         </TooltipProvider>
       </AuthProvider>
