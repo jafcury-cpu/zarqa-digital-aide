@@ -1,6 +1,10 @@
-import { corsHeaders } from "@supabase/supabase-js/cors";
-import { createClient } from "@supabase/supabase-js";
+import { createClient } from "npm:@supabase/supabase-js@2.101.1";
 import { z } from "npm:zod@3.25.76";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 
 const DEFAULT_ALLOWED_HOST_PATTERNS = ["n8n.cloud", "*.n8n.cloud"];
 const REQUEST_TIMEOUT_MS = 8000;
