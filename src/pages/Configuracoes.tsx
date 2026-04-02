@@ -15,8 +15,16 @@ function validateWebhookUrl(value: string) {
 
   try {
     const parsedUrl = new URL(value);
-    if (!["http:", "https:"].includes(parsedUrl.protocol)) {
-      return "Use uma URL iniciando com http:// ou https://.";
+    if (parsedUrl.protocol !== "https:") {
+      return "Use uma URL HTTPS.";
+    }
+
+    if (["localhost", "127.0.0.1", "::1", "0.0.0.0"].includes(parsedUrl.hostname.toLowerCase())) {
+      return "Use um domínio público permitido pelo backend.";
+    }
+
+    if (parsedUrl.username || parsedUrl.password) {
+      return "Remova credenciais embutidas da URL do webhook.";
     }
 
     return null;
@@ -93,8 +101,8 @@ const Configuracoes = () => {
               aria-invalid={Boolean(webhookError)}
               className={cn(webhookError && "border-destructive focus-visible:ring-destructive")}
             />
-            <p className={cn("text-sm", webhookError ? "text-destructive" : "text-muted-foreground")}>
-              {webhookError || "Usado pelo chat para enviar POST ao workflow do n8n."}
+              <p className={cn("text-sm", webhookError ? "text-destructive" : "text-muted-foreground")}>
+                {webhookError || "Usado pelo backend do chat para enviar POST ao workflow do n8n com allowlist e timeout."}
             </p>
           </div>
 

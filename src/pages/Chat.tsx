@@ -27,17 +27,6 @@ const fallbackWelcome: MessageRow = {
   created_at: new Date().toISOString(),
 };
 
-async function extractReply(response: Response) {
-  const contentType = response.headers.get("content-type") ?? "";
-
-  if (contentType.includes("application/json")) {
-    const payload = await response.json();
-    return payload.reply ?? payload.message ?? payload.output ?? payload.response ?? JSON.stringify(payload);
-  }
-
-  return response.text();
-}
-
 function sanitizeMessages(rows: Array<{ id: string; role: string; content: string; created_at: string }> | null | undefined) {
   return (rows ?? []).filter((row): row is MessageRow => isValidMessageRole(row.role));
 }
@@ -109,26 +98,23 @@ const Chat = () => {
     setMessages((current) => [...current, userMessage as MessageRow]);
 
     try {
-      // TODO: conectar com n8n webhook
       let reply = "Webhook ainda não configurado. Defina a URL em Configurações para ativar respostas do n8n.";
 
       if (webhookUrl) {
-        const response = await fetch(webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const history = [...messages, userMessage as MessageRow].map((message) => ({ role: message.role, content: message.content }));
+        const { data, error } = await supabase.functions.invoke("chat-webhook", {
+          body: {
             message: content,
-            userId: user.id,
             source: "zarqa-chat",
-            history: renderedMessages.map((message) => ({ role: message.role, content: message.content })),
-          }),
+            history,
+          },
         });
 
-        if (!response.ok) {
-          throw new Error(`Webhook retornou ${response.status}`);
+        if (error) {
+          throw new Error(error.message || "Falha ao acionar o backend do chat.");
         }
 
-        reply = (await extractReply(response)).trim() || reply;
+        reply = typeof data?.reply === "string" ? data.reply.trim() || reply : reply;
       }
 
       const { data: assistantMessage, error: assistantInsertError } = await supabase
