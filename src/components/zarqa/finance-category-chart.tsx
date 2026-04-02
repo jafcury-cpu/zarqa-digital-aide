@@ -1,11 +1,15 @@
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
-import { financeCategoryData } from "@/lib/zarqa-mocks";
 
-export default function FinanceCategoryChart() {
+type FinanceCategoryPoint = {
+  category: string;
+  total: number;
+};
+
+export default function FinanceCategoryChart({ data }: { data: FinanceCategoryPoint[] }) {
   return (
     <div className="h-[320px] rounded-2xl border border-border bg-panel-elevated p-4">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={financeCategoryData} margin={{ top: 16, right: 12, left: -10, bottom: 0 }}>
+        <BarChart data={data} margin={{ top: 16, right: 12, left: -10, bottom: 0 }}>
           <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
           <XAxis dataKey="category" stroke="hsl(var(--muted-foreground))" tickLine={false} axisLine={false} />
           <YAxis stroke="hsl(var(--muted-foreground))" tickFormatter={(value) => `R$${value / 1000}k`} tickLine={false} axisLine={false} />
