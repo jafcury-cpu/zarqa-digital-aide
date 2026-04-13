@@ -135,6 +135,20 @@ const Financeiro = () => {
   const [creditCards, setCreditCards] = useState<CreditCardRow[]>(defaultCreditCards);
   const [reconciliation, setReconciliation] = useState<ReconciliationRow[]>(defaultReconciliation);
 
+  const reloadDynamic = useCallback(async () => {
+    if (!user) return;
+    try {
+      const [baResult, ccResult, rcResult] = await Promise.all([
+        supabase.from("bank_accounts").select("*").order("bank_name"),
+        supabase.from("credit_cards").select("*").order("card_name"),
+        supabase.from("reconciliation_status").select("*").order("institution"),
+      ]);
+      if (baResult.data) setBankAccounts(baResult.data as unknown as BankAccount[]);
+      if (ccResult.data) setCreditCards(ccResult.data as unknown as CreditCardRow[]);
+      if (rcResult.data) setReconciliation(rcResult.data as unknown as ReconciliationRow[]);
+    } catch { /* silent */ }
+  }, [user]);
+
   useEffect(() => {
     if (!user) return;
 
