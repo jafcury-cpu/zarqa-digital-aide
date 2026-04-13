@@ -56,16 +56,20 @@ const Comunicacoes = () => {
   const [sendingId, setSendingId] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    if (!user) return;
     setLoading(true);
-    const [{ data: msgs }, { data: reps }] = await Promise.all([
-      supabase.from("communication_messages").select("*").order("received_at", { ascending: false }),
-      supabase.from("communication_replies").select("*").order("created_at", { ascending: false }),
-    ]);
-    setMessages((msgs as CommMessage[]) || []);
-    setReplies((reps as CommReply[]) || []);
-    setLoading(false);
-  }, [user]);
+    try {
+      const [{ data: msgs }, { data: reps }] = await Promise.all([
+        supabase.from("communication_messages").select("*").order("received_at", { ascending: false }),
+        supabase.from("communication_replies").select("*").order("created_at", { ascending: false }),
+      ]);
+      setMessages((msgs as CommMessage[]) || []);
+      setReplies((reps as CommReply[]) || []);
+    } catch (e) {
+      console.error("Erro ao carregar comunicações:", e);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
