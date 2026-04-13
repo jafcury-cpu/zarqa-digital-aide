@@ -131,7 +131,7 @@ Sugira uma resposta adequada:`;
     const { data: reply, error: replyError } = await supabase
       .from("communication_replies")
       .insert({
-        user_id: user.id,
+        user_id: userId || message.user_id,
         message_id: message.id,
         ai_suggestion: suggestion,
         status: "suggested",
