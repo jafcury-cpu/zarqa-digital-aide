@@ -44,6 +44,45 @@ export type Database = {
         }
         Relationships: []
       }
+      bank_accounts: {
+        Row: {
+          account_type: string
+          balance: number
+          bank_name: string
+          created_at: string
+          description: string | null
+          id: string
+          reconciliation_note: string | null
+          reconciliation_pct: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_type?: string
+          balance?: number
+          bank_name: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reconciliation_note?: string | null
+          reconciliation_pct?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_type?: string
+          balance?: number
+          bank_name?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          reconciliation_note?: string | null
+          reconciliation_pct?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       bills: {
         Row: {
           amount: number
@@ -76,6 +115,45 @@ export type Database = {
           paid_at?: string | null
           status?: string
           updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      credit_cards: {
+        Row: {
+          brand: string
+          card_name: string
+          closing_day: number
+          created_at: string
+          credit_limit: number
+          due_day: number
+          id: string
+          updated_at: string
+          used_amount: number
+          user_id: string
+        }
+        Insert: {
+          brand?: string
+          card_name: string
+          closing_day?: number
+          created_at?: string
+          credit_limit?: number
+          due_day?: number
+          id?: string
+          updated_at?: string
+          used_amount?: number
+          user_id: string
+        }
+        Update: {
+          brand?: string
+          card_name?: string
+          closing_day?: number
+          created_at?: string
+          credit_limit?: number
+          due_day?: number
+          id?: string
+          updated_at?: string
+          used_amount?: number
           user_id?: string
         }
         Relationships: []
@@ -169,6 +247,39 @@ export type Database = {
           created_at?: string
           id?: string
           role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reconciliation_status: {
+        Row: {
+          created_at: string
+          current_phase: string
+          id: string
+          institution: string
+          note: string | null
+          progress_pct: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          current_phase?: string
+          id?: string
+          institution: string
+          note?: string | null
+          progress_pct?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          current_phase?: string
+          id?: string
+          institution?: string
+          note?: string | null
+          progress_pct?: number
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
