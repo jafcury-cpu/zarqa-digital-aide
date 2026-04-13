@@ -23,6 +23,7 @@ type Contact = {
   category: string;
   notes: string | null;
   is_favorite: boolean;
+  birthday: string | null;
 };
 
 type Props = {
