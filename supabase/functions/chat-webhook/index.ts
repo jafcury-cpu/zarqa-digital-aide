@@ -144,16 +144,17 @@ Deno.serve(async (req) => {
     }
 
     const supabaseUrl = getEnv("SUPABASE_URL");
-    const supabasePublishableKey = getEnv("SUPABASE_PUBLISHABLE_KEY");
+    const supabasePublishableKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    if (!supabasePublishableKey) throw new Error("Supabase anon key is not configured");
 
     const supabase = createClient(supabaseUrl, supabasePublishableKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    const { data: userData, error: userError } = await supabase.auth.getUser(token);
 
-    if (claimsError || !claimsData?.claims?.sub) {
+    if (userError || !userData?.user?.id) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -168,7 +169,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = userData.user.id;
     const { data: settingsRow, error: settingsError } = await supabase
       .from("settings")
       .select("webhook_url")
