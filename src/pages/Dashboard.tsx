@@ -26,15 +26,17 @@ const Dashboard = () => {
   const { full, short } = useSaoPauloTime();
 
   useEffect(() => {
-    if (!user) return;
-
     let cancelled = false;
 
     const load = async () => {
       setLoading(true);
       try {
-        const data = await getDashboardData(user.id);
-        if (!cancelled) setDashboardData(data);
+        if (user) {
+          const data = await getDashboardData(user.id);
+          if (!cancelled) setDashboardData(data);
+        } else {
+          if (!cancelled) setDashboardData(getFallbackDashboardData());
+        }
       } catch (error) {
         if (!cancelled) {
           setDashboardData(getFallbackDashboardData());
