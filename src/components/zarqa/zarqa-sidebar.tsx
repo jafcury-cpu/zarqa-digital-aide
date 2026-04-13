@@ -1,5 +1,6 @@
 import {
   Bell,
+  BookUser,
   ChevronRight,
   FileText,
   HeartPulse,
@@ -36,6 +37,7 @@ const navigation = [
   { title: "Financeiro", href: "/financeiro", icon: Wallet },
   { title: "Saúde", href: "/saude", icon: HeartPulse },
   { title: "Documentos", href: "/documentos", icon: FileText },
+  { title: "Contatos", href: "/contatos", icon: BookUser },
   { title: "Configurações", href: "/configuracoes", icon: Settings },
 ];
 

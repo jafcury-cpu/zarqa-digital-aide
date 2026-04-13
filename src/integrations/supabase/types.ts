@@ -119,6 +119,48 @@ export type Database = {
         }
         Relationships: []
       }
+      contacts: {
+        Row: {
+          category: string
+          created_at: string
+          email: string | null
+          family_member: string | null
+          id: string
+          is_favorite: boolean
+          name: string
+          notes: string | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          email?: string | null
+          family_member?: string | null
+          id?: string
+          is_favorite?: boolean
+          name: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          email?: string | null
+          family_member?: string | null
+          id?: string
+          is_favorite?: boolean
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       credit_cards: {
         Row: {
           brand: string
