@@ -426,10 +426,16 @@ const Financeiro = () => {
           </TabsList>
 
           <TabsContent value="contas">
+            <div className="mb-3 flex justify-end">
+              <BankAccountFormDialog onSaved={reloadDynamic} />
+            </div>
             <div className="grid gap-4 md:grid-cols-3">
               {bankAccounts.map((account) => (
                 <div key={account.id} className="rounded-2xl border border-border bg-panel-elevated p-5">
-                  <p className="text-sm font-semibold text-muted-foreground">{account.bank_name}</p>
+                  <div className="flex items-start justify-between">
+                    <p className="text-sm font-semibold text-muted-foreground">{account.bank_name}</p>
+                    <BankAccountFormDialog account={account} onSaved={reloadDynamic} />
+                  </div>
                   <h3 className="mt-2 text-lg font-semibold text-foreground">{account.description || account.account_type}</h3>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
                     Saldo: {formatCurrency(account.balance)} • Conciliação: {account.reconciliation_pct}%
