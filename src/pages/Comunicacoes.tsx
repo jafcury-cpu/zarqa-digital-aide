@@ -182,7 +182,7 @@ const Comunicacoes = () => {
 
       <div className="grid gap-4 lg:grid-cols-[1fr_1fr]">
         {/* Message list */}
-        <SectionCard title="Mensagens" subtitle={`${filtered.length} mensagem(ns)`}>
+        <SectionCard title="Mensagens" description={`${filtered.length} mensagem(ns)`}>
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="size-6 animate-spin text-muted-foreground" />
