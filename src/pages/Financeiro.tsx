@@ -446,10 +446,16 @@ const Financeiro = () => {
           </TabsContent>
 
           <TabsContent value="cartoes">
+            <div className="mb-3 flex justify-end">
+              <CreditCardFormDialog onSaved={reloadDynamic} />
+            </div>
             <div className="grid gap-4 md:grid-cols-3">
               {creditCards.map((card) => (
                 <div key={card.id} className="rounded-2xl border border-border bg-panel-elevated p-5">
-                  <CreditCard className="h-5 w-5 text-primary" />
+                  <div className="flex items-start justify-between">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    <CreditCardFormDialog card={card} onSaved={reloadDynamic} />
+                  </div>
                   <h3 className="mt-3 text-lg font-semibold text-foreground">{card.card_name}</h3>
                   <p className="mt-2 text-sm font-medium text-foreground">
                     {card.credit_limit > 0 ? `${Math.round((card.used_amount / card.credit_limit) * 100)}% do limite usado` : "Sem limite definido"}
