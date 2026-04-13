@@ -119,6 +119,98 @@ export type Database = {
         }
         Relationships: []
       }
+      communication_messages: {
+        Row: {
+          channel: string
+          content: string
+          created_at: string
+          external_id: string | null
+          id: string
+          metadata: Json | null
+          priority: string
+          received_at: string
+          sender_handle: string | null
+          sender_name: string
+          status: string
+          subject: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          channel?: string
+          content: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          received_at?: string
+          sender_handle?: string | null
+          sender_name: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          channel?: string
+          content?: string
+          created_at?: string
+          external_id?: string | null
+          id?: string
+          metadata?: Json | null
+          priority?: string
+          received_at?: string
+          sender_handle?: string | null
+          sender_name?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      communication_replies: {
+        Row: {
+          ai_suggestion: string
+          approved_content: string | null
+          created_at: string
+          id: string
+          message_id: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ai_suggestion: string
+          approved_content?: string | null
+          created_at?: string
+          id?: string
+          message_id: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ai_suggestion?: string
+          approved_content?: string | null
+          created_at?: string
+          id?: string
+          message_id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "communication_replies_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "communication_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contacts: {
         Row: {
           birthday: string | null
