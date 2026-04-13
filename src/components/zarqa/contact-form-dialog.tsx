@@ -23,6 +23,7 @@ type Contact = {
   category: string;
   notes: string | null;
   is_favorite: boolean;
+  birthday: string | null;
 };
 
 type Props = {
@@ -41,13 +42,14 @@ export function ContactFormDialog({ contact, onSaved }: Props) {
   const [category, setCategory] = useState(contact?.category ?? "geral");
   const [notes, setNotes] = useState(contact?.notes ?? "");
   const [isFavorite, setIsFavorite] = useState(contact?.is_favorite ?? false);
+  const [birthday, setBirthday] = useState(contact?.birthday ?? "");
 
   const isEdit = !!contact;
 
   const resetForm = () => {
     if (!isEdit) {
       setName(""); setPhone(""); setEmail(""); setFamilyMember("Pessoal");
-      setCategory("geral"); setNotes(""); setIsFavorite(false);
+      setCategory("geral"); setNotes(""); setIsFavorite(false); setBirthday("");
     }
   };
 
@@ -64,6 +66,7 @@ export function ContactFormDialog({ contact, onSaved }: Props) {
         category,
         notes: notes.trim() || null,
         is_favorite: isFavorite,
+        birthday: birthday || null,
       };
 
       if (isEdit) {
@@ -149,9 +152,15 @@ export function ContactFormDialog({ contact, onSaved }: Props) {
               </Select>
             </div>
           </div>
-          <div className="grid gap-1.5">
-            <Label>Notas</Label>
-            <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observações sobre o contato" rows={3} />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-1.5">
+              <Label>Notas</Label>
+              <Textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Observações" rows={2} />
+            </div>
+            <div className="grid gap-1.5">
+              <Label>Aniversário</Label>
+              <Input type="date" value={birthday} onChange={e => setBirthday(e.target.value)} />
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Switch checked={isFavorite} onCheckedChange={setIsFavorite} />

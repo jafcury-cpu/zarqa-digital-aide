@@ -121,6 +121,7 @@ export type Database = {
       }
       contacts: {
         Row: {
+          birthday: string | null
           category: string
           created_at: string
           email: string | null
@@ -134,6 +135,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          birthday?: string | null
           category?: string
           created_at?: string
           email?: string | null
@@ -147,6 +149,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          birthday?: string | null
           category?: string
           created_at?: string
           email?: string | null
@@ -268,6 +271,53 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      important_dates: {
+        Row: {
+          contact_id: string | null
+          created_at: string
+          event_date: string
+          id: string
+          notes: string | null
+          recurrence: string
+          remind_days_before: number
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          contact_id?: string | null
+          created_at?: string
+          event_date: string
+          id?: string
+          notes?: string | null
+          recurrence?: string
+          remind_days_before?: number
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          contact_id?: string | null
+          created_at?: string
+          event_date?: string
+          id?: string
+          notes?: string | null
+          recurrence?: string
+          remind_days_before?: number
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "important_dates_contact_id_fkey"
+            columns: ["contact_id"]
+            isOneToOne: false
+            referencedRelation: "contacts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {

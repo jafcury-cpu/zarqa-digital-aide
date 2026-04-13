@@ -7,12 +7,38 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ContactFormDialog, FAMILY_MEMBERS, CATEGORIES, type Contact } from "@/components/zarqa/contact-form-dialog";
-import { Mail, Phone, Star, User, Users } from "lucide-react";
+import { ImportantDateFormDialog, type ImportantDate } from "@/components/zarqa/important-date-form-dialog";
+import { Cake, CalendarHeart, Gift, Mail, Phone, Star, User, Users } from "lucide-react";
+
+function daysUntilNextOccurrence(dateStr: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(dateStr + "T12:00:00");
+  const next = new Date(today.getFullYear(), d.getMonth(), d.getDate());
+  if (next < today) next.setFullYear(next.getFullYear() + 1);
+  return Math.round((next.getTime() - today.getTime()) / 86400000);
+}
+
+function formatDateBR(dateStr: string): string {
+  const d = new Date(dateStr + "T12:00:00");
+  return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" });
+}
+
+type UpcomingEvent = {
+  id: string;
+  title: string;
+  date: string;
+  daysUntil: number;
+  contactName?: string;
+  type: "birthday" | "date";
+  sourceId?: string;
+};
 
 const Contatos = () => {
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [importantDates, setImportantDates] = useState<ImportantDate[]>([]);
   const [search, setSearch] = useState("");
   const [familyFilter, setFamilyFilter] = useState("todos");
   const [categoryFilter, setCategoryFilter] = useState("todos");
@@ -22,21 +48,35 @@ const Contatos = () => {
     try {
       const { data, error } = await supabase
         .from("contacts")
-        .select("id, name, phone, email, family_member, category, notes, is_favorite")
+        .select("id, name, phone, email, family_member, category, notes, is_favorite, birthday")
         .order("is_favorite", { ascending: false })
         .order("name");
       if (error) throw error;
       setContacts((data as Contact[]) ?? []);
-    } catch {
-      // silent
-    }
+    } catch { /* silent */ }
   }, [user]);
+
+  const loadDates = useCallback(async () => {
+    if (!user) return;
+    try {
+      const { data, error } = await supabase
+        .from("important_dates")
+        .select("id, contact_id, title, event_date, recurrence, remind_days_before, notes")
+        .order("event_date");
+      if (error) throw error;
+      setImportantDates((data as ImportantDate[]) ?? []);
+    } catch { /* silent */ }
+  }, [user]);
+
+  const reloadAll = useCallback(async () => {
+    await Promise.all([loadContacts(), loadDates()]);
+  }, [loadContacts, loadDates]);
 
   useEffect(() => {
     if (!user) return;
     setLoading(true);
-    loadContacts().finally(() => setLoading(false));
-  }, [user, loadContacts]);
+    reloadAll().finally(() => setLoading(false));
+  }, [user, reloadAll]);
 
   const filtered = useMemo(() =>
     contacts.filter(c => {
@@ -53,6 +93,45 @@ const Contatos = () => {
     favorites: contacts.filter(c => c.is_favorite).length,
     families: new Set(contacts.map(c => c.family_member).filter(Boolean)).size,
   }), [contacts]);
+
+  const upcoming = useMemo(() => {
+    const events: UpcomingEvent[] = [];
+
+    // Birthdays from contacts
+    contacts.forEach(c => {
+      if (c.birthday) {
+        events.push({
+          id: `bday-${c.id}`,
+          title: `Aniversário de ${c.name}`,
+          date: c.birthday,
+          daysUntil: daysUntilNextOccurrence(c.birthday),
+          contactName: c.name,
+          type: "birthday",
+        });
+      }
+    });
+
+    // Important dates
+    importantDates.forEach(d => {
+      const contactName = contacts.find(c => c.id === d.contact_id)?.name;
+      events.push({
+        id: d.id,
+        title: d.title,
+        date: d.event_date,
+        daysUntil: d.recurrence === "unica"
+          ? Math.round((new Date(d.event_date + "T12:00:00").getTime() - new Date().setHours(0, 0, 0, 0)) / 86400000)
+          : daysUntilNextOccurrence(d.event_date),
+        contactName,
+        type: "date",
+        sourceId: d.id,
+      });
+    });
+
+    return events
+      .filter(e => e.daysUntil >= 0 && e.daysUntil <= 90)
+      .sort((a, b) => a.daysUntil - b.daysUntil)
+      .slice(0, 10);
+  }, [contacts, importantDates]);
 
   if (loading) {
     return (
@@ -81,7 +160,41 @@ const Contatos = () => {
         </div>
       </div>
 
-      {/* Filters + Add */}
+      {/* Upcoming dates */}
+      <SectionCard title="Próximas Datas" description="Aniversários e datas importantes nos próximos 90 dias" eyebrow="Lembretes">
+        <div className="mb-3 flex justify-end">
+          <ImportantDateFormDialog contacts={contacts} onSaved={reloadAll} />
+        </div>
+        {upcoming.length === 0 ? (
+          <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma data próxima cadastrada</p>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {upcoming.map(event => (
+              <div key={event.id} className="rounded-xl border border-border bg-panel-elevated p-4 transition-colors hover:border-primary/30">
+                <div className="flex items-start gap-3">
+                  <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
+                    event.type === "birthday" ? "bg-warning/15 text-warning" : "bg-primary/15 text-primary"
+                  }`}>
+                    {event.type === "birthday" ? <Cake className="h-5 w-5" /> : <CalendarHeart className="h-5 w-5" />}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-foreground truncate">{event.title}</p>
+                    <p className="text-xs text-muted-foreground">{formatDateBR(event.date)}</p>
+                    {event.contactName && event.type === "date" && (
+                      <p className="text-xs text-muted-foreground">{event.contactName}</p>
+                    )}
+                  </div>
+                  <Badge variant={event.daysUntil === 0 ? "default" : event.daysUntil <= 7 ? "destructive" : "secondary"} className="shrink-0 text-xs">
+                    {event.daysUntil === 0 ? "Hoje!" : event.daysUntil === 1 ? "Amanhã" : `${event.daysUntil}d`}
+                  </Badge>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
+
+      {/* Contacts list */}
       <SectionCard title="Agenda de Contatos" description="Organizado por membro da família e assunto" eyebrow="Contacts">
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <Input
@@ -105,7 +218,7 @@ const Contatos = () => {
             </SelectContent>
           </Select>
           <div className="ml-auto">
-            <ContactFormDialog onSaved={loadContacts} />
+            <ContactFormDialog onSaved={reloadAll} />
           </div>
         </div>
 
@@ -133,7 +246,7 @@ const Contatos = () => {
                       )}
                     </div>
                   </div>
-                  <ContactFormDialog contact={contact} onSaved={loadContacts} />
+                  <ContactFormDialog contact={contact} onSaved={reloadAll} />
                 </div>
 
                 <div className="mt-3 space-y-1.5">
@@ -145,6 +258,11 @@ const Contatos = () => {
                   {contact.email && (
                     <p className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Mail className="h-3.5 w-3.5" /> {contact.email}
+                    </p>
+                  )}
+                  {contact.birthday && (
+                    <p className="flex items-center gap-2 text-sm text-muted-foreground">
+                      <Gift className="h-3.5 w-3.5" /> {formatDateBR(contact.birthday)}
                     </p>
                   )}
                 </div>
