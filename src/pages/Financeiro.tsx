@@ -1,5 +1,6 @@
 import { lazy, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
+import { supabase } from "@/integrations/supabase/client";
 import { DeferredLazySection } from "@/components/zarqa/deferred-lazy-section";
 import { LoadingPanel } from "@/components/zarqa/loading-panel";
 import { SectionCard } from "@/components/zarqa/section-card";
@@ -34,24 +35,59 @@ type Metric = {
   tone: "primary" | "success" | "warning";
 };
 
-type TimelineItem = {
-  day: string;
-  title: string;
-  amount: string;
-  meta: string;
+type BankAccount = {
+  id: string;
+  bank_name: string;
+  account_type: string;
+  description: string | null;
+  balance: number;
+  reconciliation_pct: number;
+  reconciliation_note: string | null;
 };
 
-const timeline: TimelineItem[] = [
+type CreditCardRow = {
+  id: string;
+  card_name: string;
+  brand: string;
+  credit_limit: number;
+  used_amount: number;
+  closing_day: number;
+  due_day: number;
+};
+
+type ReconciliationRow = {
+  id: string;
+  institution: string;
+  progress_pct: number;
+  current_phase: string;
+  note: string | null;
+};
+
+type TimelineItem = { day: string; title: string; amount: string; meta: string };
+
+const defaultTimeline: TimelineItem[] = [
   { day: "Hoje", title: "Fatura C6 Black", amount: "R$ 1.140", meta: "vence em 3 dias" },
   { day: "Amanhã", title: "Boleto condomínio", amount: "R$ 780", meta: "agendado no Itaú" },
   { day: "Sex", title: "Conciliação Bradesco", amount: "12 lançamentos", meta: "2 divergências" },
   { day: "Seg", title: "Fechamento Visa Itaú", amount: "R$ 2.040", meta: "limite usado 64%" },
 ];
 
-const bankStatus = [
-  { name: "Itaú", progress: 92, detail: "OFX e conciliação automática preparados" },
-  { name: "Bradesco", progress: 74, detail: "último extrato importado hoje" },
-  { name: "C6", progress: 61, detail: "cartão ativo e boletos vinculados" },
+const defaultBankAccounts: BankAccount[] = [
+  { id: "1", bank_name: "Itaú", account_type: "corrente", description: "Conta principal da casa", balance: 0, reconciliation_pct: 92, reconciliation_note: "OFX e conciliação automática preparados" },
+  { id: "2", bank_name: "Bradesco", account_type: "corrente", description: "Reserva e despesas do casal", balance: 0, reconciliation_pct: 74, reconciliation_note: "último extrato importado hoje" },
+  { id: "3", bank_name: "C6", account_type: "corrente", description: "Conta conectada ao cartão", balance: 0, reconciliation_pct: 61, reconciliation_note: "cartão ativo e boletos vinculados" },
+];
+
+const defaultCreditCards: CreditCardRow[] = [
+  { id: "1", card_name: "Itaú Visa", brand: "Visa", credit_limit: 10000, used_amount: 6400, closing_day: 10, due_day: 17 },
+  { id: "2", card_name: "Bradesco Elo", brand: "Elo", credit_limit: 10000, used_amount: 3200, closing_day: 18, due_day: 25 },
+  { id: "3", card_name: "C6 Black", brand: "Mastercard", credit_limit: 10000, used_amount: 5100, closing_day: 8, due_day: 15 },
+];
+
+const defaultReconciliation: ReconciliationRow[] = [
+  { id: "1", institution: "Itaú", progress_pct: 92, current_phase: "manual", note: "OFX e conciliação automática preparados" },
+  { id: "2", institution: "Bradesco", progress_pct: 74, current_phase: "manual", note: "último extrato importado hoje" },
+  { id: "3", institution: "C6", progress_pct: 61, current_phase: "manual", note: "cartão ativo e boletos vinculados" },
 ];
 
 const modules = [
@@ -92,6 +128,9 @@ const Financeiro = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("todos");
   const [financeData, setFinanceData] = useState<FinanceData>(getFallbackFinanceData());
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>(defaultBankAccounts);
+  const [creditCards, setCreditCards] = useState<CreditCardRow[]>(defaultCreditCards);
+  const [reconciliation, setReconciliation] = useState<ReconciliationRow[]>(defaultReconciliation);
 
   useEffect(() => {
     if (!user) return;
@@ -101,8 +140,19 @@ const Financeiro = () => {
     const load = async () => {
       setLoading(true);
       try {
-        const data = await getFinanceData(user.id);
-        if (!cancelled) setFinanceData(data);
+        const [finResult, baResult, ccResult, rcResult] = await Promise.all([
+          getFinanceData(user.id),
+          supabase.from("bank_accounts").select("*").order("bank_name"),
+          supabase.from("credit_cards").select("*").order("card_name"),
+          supabase.from("reconciliation_status").select("*").order("institution"),
+        ]);
+
+        if (!cancelled) {
+          setFinanceData(finResult);
+          if (baResult.data && baResult.data.length > 0) setBankAccounts(baResult.data as unknown as BankAccount[]);
+          if (ccResult.data && ccResult.data.length > 0) setCreditCards(ccResult.data as unknown as CreditCardRow[]);
+          if (rcResult.data && rcResult.data.length > 0) setReconciliation(rcResult.data as unknown as ReconciliationRow[]);
+        }
       } catch (error) {
         if (!cancelled) {
           setFinanceData(getFallbackFinanceData());
@@ -168,8 +218,11 @@ const Financeiro = () => {
   }, [financeData]);
 
   const reconciliationCompletion = useMemo(
-    () => Math.round(bankStatus.reduce((sum, item) => sum + item.progress, 0) / bankStatus.length),
-    [],
+    () => {
+      const source = reconciliation.length > 0 ? reconciliation : defaultReconciliation;
+      return Math.round(source.reduce((sum, item) => sum + item.progress_pct, 0) / source.length);
+    },
+    [reconciliation],
   );
 
   if (loading) {
@@ -215,14 +268,14 @@ const Financeiro = () => {
               </div>
             </div>
             <div className="mt-5 space-y-4">
-              {bankStatus.map((bank) => (
-                <div key={bank.name} className="space-y-1.5">
+              {reconciliation.map((bank) => (
+                <div key={bank.id} className="space-y-1.5">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="font-semibold text-foreground">{bank.name}</span>
-                    <span className="text-muted-foreground">{bank.progress}%</span>
+                    <span className="font-semibold text-foreground">{bank.institution}</span>
+                    <span className="text-muted-foreground">{bank.progress_pct}%</span>
                   </div>
-                  <Progress value={bank.progress} className="h-2 bg-muted" />
-                  <p className="text-xs text-muted-foreground">{bank.detail}</p>
+                  <Progress value={bank.progress_pct} className="h-2 bg-muted" />
+                  <p className="text-xs text-muted-foreground">{bank.note}</p>
                 </div>
               ))}
             </div>
@@ -268,7 +321,7 @@ const Financeiro = () => {
 
         <SectionCard title="Próximos vencimentos" description="Agenda operacional de pagamentos" eyebrow="Timeline" className="xl:col-span-4">
           <div className="space-y-3">
-            {timeline.map((item) => (
+            {defaultTimeline.map((item) => (
               <div key={`${item.day}-${item.title}`} className="rounded-xl border border-border bg-panel-elevated p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
@@ -357,15 +410,13 @@ const Financeiro = () => {
 
           <TabsContent value="contas">
             <div className="grid gap-4 md:grid-cols-3">
-              {[
-                ["Itaú", "Conta principal da casa", "Saldo inicial, boletos agendados e conciliação"],
-                ["Bradesco", "Reserva e despesas do casal", "Importação OFX e conferência semanal"],
-                ["C6", "Conta conectada ao cartão", "Limite, fatura e transferências no mesmo lugar"],
-              ].map(([bank, title, desc]) => (
-                <div key={bank} className="rounded-2xl border border-border bg-panel-elevated p-5">
-                  <p className="text-sm font-semibold text-muted-foreground">{bank}</p>
-                  <h3 className="mt-2 text-lg font-semibold text-foreground">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{desc}</p>
+              {bankAccounts.map((account) => (
+                <div key={account.id} className="rounded-2xl border border-border bg-panel-elevated p-5">
+                  <p className="text-sm font-semibold text-muted-foreground">{account.bank_name}</p>
+                  <h3 className="mt-2 text-lg font-semibold text-foreground">{account.description || account.account_type}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                    Saldo: {formatCurrency(account.balance)} • Conciliação: {account.reconciliation_pct}%
+                  </p>
                 </div>
               ))}
             </div>
@@ -373,16 +424,16 @@ const Financeiro = () => {
 
           <TabsContent value="cartoes">
             <div className="grid gap-4 md:grid-cols-3">
-              {[
-                ["Itaú Visa", "64% do limite usado", "fecha dia 10 • vence dia 17"],
-                ["Bradesco Elo", "32% do limite usado", "fecha dia 18 • vence dia 25"],
-                ["C6 Black", "51% do limite usado", "fecha dia 08 • vence dia 15"],
-              ].map(([name, usage, meta]) => (
-                <div key={name} className="rounded-2xl border border-border bg-panel-elevated p-5">
+              {creditCards.map((card) => (
+                <div key={card.id} className="rounded-2xl border border-border bg-panel-elevated p-5">
                   <CreditCard className="h-5 w-5 text-primary" />
-                  <h3 className="mt-3 text-lg font-semibold text-foreground">{name}</h3>
-                  <p className="mt-2 text-sm font-medium text-foreground">{usage}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{meta}</p>
+                  <h3 className="mt-3 text-lg font-semibold text-foreground">{card.card_name}</h3>
+                  <p className="mt-2 text-sm font-medium text-foreground">
+                    {card.credit_limit > 0 ? `${Math.round((card.used_amount / card.credit_limit) * 100)}% do limite usado` : "Sem limite definido"}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    fecha dia {String(card.closing_day).padStart(2, "0")} • vence dia {String(card.due_day).padStart(2, "0")}
+                  </p>
                 </div>
               ))}
             </div>
