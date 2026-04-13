@@ -73,7 +73,10 @@ const Contatos = () => {
   }, [loadContacts, loadDates]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     reloadAll().finally(() => setLoading(false));
   }, [user, reloadAll]);

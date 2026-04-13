@@ -43,7 +43,10 @@ const Configuracoes = () => {
   const webhookError = useMemo(() => validateWebhookUrl(webhookUrl), [webhookUrl]);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
 
     const loadSettings = async () => {
       setLoading(true);

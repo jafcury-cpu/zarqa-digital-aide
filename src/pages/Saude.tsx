@@ -21,11 +21,13 @@ const Saude = () => {
   ];
 
   useEffect(() => {
-    if (!user) return;
-
     let cancelled = false;
 
     const load = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const data = await getHealthData(user.id);

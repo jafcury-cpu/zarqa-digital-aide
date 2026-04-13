@@ -150,11 +150,13 @@ const Financeiro = () => {
   }, [user]);
 
   useEffect(() => {
-    if (!user) return;
-
     let cancelled = false;
 
     const load = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
       setLoading(true);
       try {
         const [finResult, baResult, ccResult, rcResult] = await Promise.all([

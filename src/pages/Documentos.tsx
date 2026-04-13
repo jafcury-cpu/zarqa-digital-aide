@@ -44,7 +44,10 @@ const Documentos = () => {
   const [uploading, setUploading] = useState(false);
 
   const loadDocuments = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     const { data, error } = await supabase
       .from("documents")
