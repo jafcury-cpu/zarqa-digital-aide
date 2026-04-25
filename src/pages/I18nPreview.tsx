@@ -13,13 +13,9 @@ import {
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { dictionary, t } from "@/lib/i18n";
 import { getUsage, getUsageCount } from "@/lib/i18n-usage";
+import { buildI18nExport, type ExportFormat } from "@/lib/i18n-export";
+import { toast } from "sonner";
 
-function escapeCsvField(value: string): string {
-  if (/[",\n\r]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
 
 function downloadFile(filename: string, content: string, mime: string) {
   const blob = new Blob([content], { type: `${mime};charset=utf-8;` });
