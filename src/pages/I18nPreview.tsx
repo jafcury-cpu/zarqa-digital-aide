@@ -22,7 +22,10 @@ import { Label } from "@/components/ui/label";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { dictionary, t } from "@/lib/i18n";
 import { getUsage, getUsageCount } from "@/lib/i18n-usage";
-import { buildI18nExport, type ExportFormat } from "@/lib/i18n-export";
+import {
+  buildI18nExport,
+  buildI18nXlsxExport,
+} from "@/lib/i18n-export";
 import { toast } from "sonner";
 
 
@@ -160,7 +163,7 @@ export default function I18nPreview() {
   const areaCount = byArea.length;
 
   function handleExport(
-    format: ExportFormat,
+    format: "json" | "csv",
     entries?: ReadonlyArray<readonly [string, string]>,
   ) {
     try {
@@ -174,6 +177,31 @@ export default function I18nPreview() {
         err instanceof Error ? err.message : "Erro desconhecido ao exportar.";
       toast.error("Falha ao exportar dicionário", { description: message });
       if (import.meta.env?.DEV) console.error("[i18n-export]", err);
+    }
+  }
+
+  async function handleExportXlsx(
+    entries?: ReadonlyArray<readonly [string, string]>,
+  ) {
+    try {
+      const out = await buildI18nXlsxExport(entries);
+      const blob = new Blob([out.content as BlobPart], { type: out.mime });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = out.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success(
+        `Exportado ${out.totalKeys} chave${out.totalKeys === 1 ? "" : "s"} (XLSX).`,
+      );
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Erro desconhecido ao exportar.";
+      toast.error("Falha ao exportar XLSX", { description: message });
+      if (import.meta.env?.DEV) console.error("[i18n-export-xlsx]", err);
     }
   }
 
@@ -257,7 +285,15 @@ export default function I18nPreview() {
             <Download className="mr-2 size-4" />
             CSV (visível)
           </Button>
-
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleExportXlsx(filtered)}
+          >
+            <Download className="mr-2 size-4" />
+            XLSX (visível)
+          </Button>
           {area !== "__all__" && (
             <>
               <Button
@@ -280,6 +316,16 @@ export default function I18nPreview() {
                 <Download className="mr-2 size-4" />
                 CSV completo da área “{area}” ({areaCount})
               </Button>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={() => handleExportXlsx(byArea)}
+                title={`Exporta todas as ${areaCount} chaves da área "${area}" em XLSX, ignorando a busca textual.`}
+              >
+                <Download className="mr-2 size-4" />
+                XLSX completo da área “{area}” ({areaCount})
+              </Button>
             </>
           )}
 
@@ -301,7 +347,15 @@ export default function I18nPreview() {
             <Download className="mr-2 size-4" />
             Tudo (CSV)
           </Button>
-
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => handleExportXlsx()}
+          >
+            <Download className="mr-2 size-4" />
+            Tudo (XLSX)
+          </Button>
           <span className="self-center text-xs text-muted-foreground">
             Visível: {filtered.length}
             {area !== "__all__" ? ` · Área: ${areaCount}` : ""} · Total: {total}

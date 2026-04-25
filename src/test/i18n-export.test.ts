@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { dictionary } from "@/lib/i18n";
-import { buildI18nExport, validateEntries } from "@/lib/i18n-export";
+import {
+  buildI18nExport,
+  buildI18nXlsxExport,
+  validateEntries,
+} from "@/lib/i18n-export";
+import ExcelJS from "exceljs";
 
 describe("i18n-export", () => {
   it("dicionário não tem chaves ou valores vazios", () => {
@@ -475,5 +480,94 @@ describe("i18n-export", () => {
     );
     const reExported = buildI18nExport("csv", reExportTuples as never);
     expect(reExported.content).toBe(trickyOut.content);
+  });
+
+  it("round-trip XLSX: exporta, reimporta e preserva key, area e value (com vírgulas, aspas e \\n)", async () => {
+    // 1) Round-trip do dicionário completo
+    const out = await buildI18nXlsxExport();
+    expect(out.format).toBe("xlsx");
+    expect(out.mime).toBe(
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    );
+    expect(out.filename).toMatch(/completo\.xlsx$/);
+    expect(out.content).toBeInstanceOf(Uint8Array);
+    expect(out.content.byteLength).toBeGreaterThan(0);
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(out.content.buffer as ArrayBuffer);
+    const ws = wb.getWorksheet("i18n");
+    expect(ws).toBeDefined();
+
+    // Header
+    const header = ws!.getRow(1).values as unknown[];
+    // ExcelJS 1-indexa values; índice 0 vem null
+    expect(header[1]).toBe("key");
+    expect(header[2]).toBe("area");
+    expect(header[3]).toBe("value");
+
+    // Linhas
+    const dictMap = dictionary as Record<string, string>;
+    const totalRows = Object.keys(dictionary).length;
+    expect(ws!.rowCount).toBe(totalRows + 1);
+    for (let i = 0; i < totalRows; i++) {
+      const row = ws!.getRow(i + 2).values as unknown[];
+      const key = row[1] as string;
+      const area = row[2] as string;
+      const value = row[3] as string;
+      expect(value).toBe(dictMap[key]);
+      const expectedArea = key.includes(".") ? key.split(".")[0] : "outros";
+      expect(area).toBe(expectedArea);
+    }
+
+    // 2) Round-trip com caracteres tricky
+    const tricky: [string, string][] = [
+      ["brand.name", 'Luize, "a Luize"\nlinha 2'],
+      ["common.save", 'salvar, "agora"\tcom tab'],
+      [
+        "dashboard.eyebrow.briefing",
+        'briefing\ncom "aspas", e vírgulas\nmúltiplas linhas',
+      ],
+    ];
+    const trickyOut = await buildI18nXlsxExport(tricky as never);
+    const wb2 = new ExcelJS.Workbook();
+    await wb2.xlsx.load(trickyOut.content.buffer as ArrayBuffer);
+    const ws2 = wb2.getWorksheet("i18n");
+    expect(ws2).toBeDefined();
+
+    // Header preservado
+    const header2 = ws2!.getRow(1).values as unknown[];
+    expect([header2[1], header2[2], header2[3]]).toEqual([
+      "key",
+      "area",
+      "value",
+    ]);
+
+    expect(ws2!.rowCount).toBe(tricky.length + 1);
+    for (let i = 0; i < tricky.length; i++) {
+      const [origKey, origValue] = tricky[i];
+      const row = ws2!.getRow(i + 2).values as unknown[];
+      expect(row[1]).toBe(origKey);
+      expect(row[2]).toBe(origKey.split(".")[0]);
+      // Valor preservado bit-a-bit (vírgulas, aspas, \n, \t)
+      expect(row[3]).toBe(origValue);
+      expect((row[3] as string).length).toBe(origValue.length);
+    }
+
+    // 3) Re-export: reimportado → exportado novamente preserva os mesmos values
+    const reTuples: [string, string][] = [];
+    for (let i = 0; i < tricky.length; i++) {
+      const row = ws2!.getRow(i + 2).values as unknown[];
+      reTuples.push([row[1] as string, row[3] as string]);
+    }
+    const reExported = await buildI18nXlsxExport(reTuples as never);
+    const wb3 = new ExcelJS.Workbook();
+    await wb3.xlsx.load(reExported.content.buffer as ArrayBuffer);
+    const ws3 = wb3.getWorksheet("i18n")!;
+    for (let i = 0; i < tricky.length; i++) {
+      const row = ws3.getRow(i + 2).values as unknown[];
+      expect(row[1]).toBe(tricky[i][0]);
+      expect(row[2]).toBe(tricky[i][0].split(".")[0]);
+      expect(row[3]).toBe(tricky[i][1]);
+    }
   });
 });
