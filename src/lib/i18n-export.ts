@@ -7,13 +7,21 @@
 
 import { dictionary, type DictionaryKey } from "@/lib/i18n";
 
-export type ExportFormat = "json" | "csv";
+export type ExportFormat = "json" | "csv" | "xlsx";
 
 export type I18nExport = {
   format: ExportFormat;
   filename: string;
   mime: string;
   content: string;
+  totalKeys: number;
+};
+
+export type I18nBinaryExport = {
+  format: "xlsx";
+  filename: string;
+  mime: string;
+  content: Uint8Array;
   totalKeys: number;
 };
 
