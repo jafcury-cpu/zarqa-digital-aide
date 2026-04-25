@@ -45,41 +45,41 @@
   }
 
   .dark {
-    --background: 210 85% 93%;
-    --foreground: 220 30% 15%;
-    --card: 210 65% 87%;
-    --card-foreground: 220 30% 15%;
-    --popover: 210 65% 87%;
-    --popover-foreground: 220 30% 15%;
-    --primary: 17 78% 50%;
-    --primary-foreground: 0 0% 100%;
-    --secondary: 217 70% 50%;
-    --secondary-foreground: 0 0% 100%;
-    --muted: 210 50% 85%;
-    --muted-foreground: 215 20% 42%;
-    --accent: 217 70% 50%;
-    --accent-foreground: 0 0% 100%;
-    --destructive: 0 72% 50%;
+    --background: 222 45% 10%;
+    --foreground: 25 95% 62%;
+    --card: 222 42% 14%;
+    --card-foreground: 25 95% 62%;
+    --popover: 222 42% 14%;
+    --popover-foreground: 25 95% 62%;
+    --primary: 25 95% 62%;
+    --primary-foreground: 222 45% 10%;
+    --secondary: 210 80% 55%;
+    --secondary-foreground: 222 45% 10%;
+    --muted: 222 38% 16%;
+    --muted-foreground: 210 60% 70%;
+    --accent: 210 80% 55%;
+    --accent-foreground: 222 45% 10%;
+    --destructive: 0 72% 58%;
     --destructive-foreground: 0 0% 100%;
-    --border: 213 40% 78%;
-    --input: 213 40% 78%;
-    --ring: 17 78% 50%;
-    --panel: 210 70% 90%;
-    --panel-elevated: 210 65% 87%;
-    --accent-blue: 217 70% 50%;
-    --accent-orange: 17 78% 50%;
-    --success: 142 60% 38%;
-    --warning: 38 85% 42%;
-    --critical: 0 72% 50%;
-    --shadow-color: 210 30% 75%;
-    --sidebar-background: 210 75% 88%;
-    --sidebar-foreground: 220 30% 15%;
-    --sidebar-primary: 17 78% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 60% 83%;
-    --sidebar-accent-foreground: 220 30% 15%;
-    --sidebar-border: 213 40% 76%;
-    --sidebar-ring: 217 70% 50%;
+    --border: 222 35% 20%;
+    --input: 222 35% 20%;
+    --ring: 25 95% 62%;
+    --panel: 222 45% 8%;
+    --panel-elevated: 222 42% 14%;
+    --accent-blue: 210 80% 55%;
+    --accent-orange: 25 95% 62%;
+    --success: 142 71% 45%;
+    --warning: 45 93% 58%;
+    --critical: 0 72% 58%;
+    --shadow-color: 222 50% 4%;
+    --sidebar-background: 222 45% 8%;
+    --sidebar-foreground: 25 95% 62%;
+    --sidebar-primary: 25 95% 62%;
+    --sidebar-primary-foreground: 222 45% 10%;
+    --sidebar-accent: 222 42% 14%;
+    --sidebar-accent-foreground: 210 80% 75%;
+    --sidebar-border: 222 35% 18%;
+    --sidebar-ring: 210 80% 55%;
   }
 
   * {
@@ -87,15 +87,15 @@
   }
 
   html {
-    color-scheme: light;
+    color-scheme: dark;
   }
 
   body {
     @apply bg-background font-sans text-foreground antialiased;
     min-height: 100vh;
     background-image:
-      radial-gradient(circle at top, hsl(var(--accent-blue) / 0.18), transparent 40%),
-      radial-gradient(circle at 85% 15%, hsl(217 80% 70% / 0.15), transparent 30%);
+      radial-gradient(circle at top, hsl(var(--accent-orange) / 0.10), transparent 30%),
+      radial-gradient(circle at 85% 15%, hsl(var(--accent-blue) / 0.14), transparent 25%);
   }
 
   h1,
