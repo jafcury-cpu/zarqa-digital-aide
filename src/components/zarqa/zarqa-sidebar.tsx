@@ -43,7 +43,7 @@ const navigation = [
   { title: "Configurações", href: "/configuracoes", icon: Settings },
 ];
 
-export function ZarqaSidebar() {
+export function LuizeSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const { user, signOut } = useAuth();
@@ -76,7 +76,7 @@ export function ZarqaSidebar() {
             </div>
             {!collapsed ? (
               <div>
-                <p className="font-display text-lg tracking-[0.2em] text-sidebar-foreground">ZARQA ٢٨</p>
+                <p className="font-display text-lg tracking-[0.2em] text-sidebar-foreground">Luize</p>
                 <p className="text-xs uppercase tracking-[0.24em] text-sidebar-foreground/60">Chief of Staff Digital</p>
               </div>
             ) : null}

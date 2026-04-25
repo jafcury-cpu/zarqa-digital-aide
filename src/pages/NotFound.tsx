@@ -16,7 +16,7 @@ const NotFound = () => {
         <span className="text-kicker">Erro de Roteamento</span>
         <h1 className="text-5xl font-semibold tracking-tight text-foreground">404</h1>
         <p className="text-muted-foreground">
-          A rota <span className="font-mono text-foreground">{location.pathname}</span> não existe na malha da ZARQA.
+          A rota <span className="font-mono text-foreground">{location.pathname}</span> não existe na malha da Luize.
         </p>
         <div className="flex justify-center">
           <Button asChild variant="hero">

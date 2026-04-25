@@ -1,7 +1,7 @@
 import { Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
-import { ZarqaSidebar } from "@/components/zarqa/zarqa-sidebar";
+import { LuizeSidebar } from "@/components/zarqa/zarqa-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 
 const labels: Record<string, { title: string; subtitle: string }> = {
@@ -14,7 +14,7 @@ const labels: Record<string, { title: string; subtitle: string }> = {
   "/configuracoes": { title: "Configurações", subtitle: "Webhook, timezone e preferências" },
 };
 
-export function ZarqaAppLayout() {
+export function LuizeAppLayout() {
   const location = useLocation();
   const { user } = useAuth();
   const current = labels[location.pathname] ?? labels["/dashboard"];
@@ -22,13 +22,13 @@ export function ZarqaAppLayout() {
   return (
     <SidebarProvider defaultOpen>
       <div className="grid min-h-screen w-full bg-background md:grid-cols-[auto_1fr]">
-        <ZarqaSidebar />
+        <LuizeSidebar />
         <SidebarInset className="bg-transparent">
           <header className="sticky top-0 z-20 flex h-16 items-center justify-between border-b border-border/80 bg-background/90 px-4 backdrop-blur md:px-6">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="h-10 w-10 rounded-xl border border-border bg-panel text-foreground hover:bg-panel-elevated md:hidden" />
               <div>
-                <p className="text-kicker">ZARQA Control Surface</p>
+                <p className="text-kicker">Luize Control Surface</p>
                 <h1 className="text-lg font-semibold tracking-tight text-foreground">{current.title}</h1>
               </div>
             </div>
