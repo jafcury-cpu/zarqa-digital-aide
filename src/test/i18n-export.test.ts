@@ -255,4 +255,84 @@ describe("i18n-export", () => {
       expect(item.value.length).toBe(origValue.length);
     }
   });
+
+  it("JSON e CSV preservam mesmos values e mesma ordem de itens", () => {
+    // Reparser CSV mínimo (RFC4180-ish) com suporte a aspas e quebras de linha.
+    function parseCsv(text: string): string[][] {
+      const rows: string[][] = [];
+      let cur: string[] = [];
+      let field = "";
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (inQuotes) {
+          if (ch === '"' && text[i + 1] === '"') {
+            field += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            field += ch;
+          }
+        } else if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === ",") {
+          cur.push(field);
+          field = "";
+        } else if (ch === "\n") {
+          cur.push(field);
+          rows.push(cur);
+          cur = [];
+          field = "";
+        } else {
+          field += ch;
+        }
+      }
+      if (field.length > 0 || cur.length > 0) {
+        cur.push(field);
+        rows.push(cur);
+      }
+      return rows;
+    }
+
+    // Caso 1: dicionário completo
+    const jsonFull = JSON.parse(buildI18nExport("json").content) as Array<{
+      key: string;
+      area: string;
+      value: string;
+    }>;
+    const csvFullRows = parseCsv(buildI18nExport("csv").content);
+    expect(csvFullRows[0]).toEqual(["key", "area", "value"]);
+    const csvFullBody = csvFullRows.slice(1);
+    expect(csvFullBody).toHaveLength(jsonFull.length);
+    for (let i = 0; i < jsonFull.length; i++) {
+      expect(csvFullBody[i][0]).toBe(jsonFull[i].key);
+      expect(csvFullBody[i][1]).toBe(jsonFull[i].area);
+      expect(csvFullBody[i][2]).toBe(jsonFull[i].value);
+    }
+
+    // Caso 2: subset com caracteres tricky e ordem específica
+    const tricky: [string, string][] = [
+      ["dashboard.eyebrow.briefing", 'briefing\ncom "aspas", e vírgulas'],
+      ["brand.name", 'Luize, "a Luize"'],
+      ["common.save", "salvar\tagora"],
+    ];
+    const jsonSub = JSON.parse(
+      buildI18nExport("json", tricky as never).content,
+    ) as Array<{ key: string; area: string; value: string }>;
+    const csvSubRows = parseCsv(
+      buildI18nExport("csv", tricky as never).content,
+    );
+    expect(csvSubRows[0]).toEqual(["key", "area", "value"]);
+    const csvSubBody = csvSubRows.slice(1);
+
+    expect(jsonSub.map((i) => i.key)).toEqual(tricky.map(([k]) => k));
+    expect(csvSubBody.map((r) => r[0])).toEqual(tricky.map(([k]) => k));
+    for (let i = 0; i < tricky.length; i++) {
+      expect(csvSubBody[i][0]).toBe(jsonSub[i].key);
+      expect(csvSubBody[i][1]).toBe(jsonSub[i].area);
+      expect(csvSubBody[i][2]).toBe(jsonSub[i].value);
+      expect(jsonSub[i].value).toBe(tricky[i][1]);
+    }
+  });
 });
