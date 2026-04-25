@@ -185,7 +185,7 @@ export default function I18nPreview() {
   ) {
     try {
       const out = await buildI18nXlsxExport(entries);
-      const blob = new Blob([out.content], { type: out.mime });
+      const blob = new Blob([out.content as BlobPart], { type: out.mime });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
