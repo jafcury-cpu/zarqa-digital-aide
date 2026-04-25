@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +35,7 @@ function validateWebhookUrl(value: string) {
 }
 
 const Configuracoes = () => {
+  useDocumentTitle("Configurações", "Webhook, timezone e preferências — Luize Blond");
   const { user } = useAuth();
   const { toast } = useToast();
   const [webhookUrl, setWebhookUrl] = useState("");

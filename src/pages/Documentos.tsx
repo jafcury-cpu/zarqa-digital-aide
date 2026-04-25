@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { fallbackDocuments, formatDateTime } from "@/lib/zarqa-mocks";
 
@@ -33,6 +34,7 @@ function sanitizeFileName(name: string) {
 }
 
 const Documentos = () => {
+  useDocumentTitle("Documentos", "Busca, upload e memória operacional — Luize Blond");
   const { user } = useAuth();
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);

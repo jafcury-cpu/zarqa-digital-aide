@@ -6,8 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import { lovable } from "@/integrations/lovable";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 const Login = () => {
+  useDocumentTitle("Login", "Acesso privado — Luize Blond Chief of Staff Digital");
   const { user } = useAuth();
   const location = useLocation();
   const { toast } = useToast();

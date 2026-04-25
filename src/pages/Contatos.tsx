@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ContactFormDialog, FAMILY_MEMBERS, CATEGORIES, type Contact } from "@/components/zarqa/contact-form-dialog";
 import { ImportantDateFormDialog, type ImportantDate } from "@/components/zarqa/important-date-form-dialog";
 import { Cake, CalendarHeart, Gift, Mail, Phone, Star, User, Users } from "lucide-react";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 function daysUntilNextOccurrence(dateStr: string): number {
   const today = new Date();
@@ -35,6 +36,7 @@ type UpcomingEvent = {
 };
 
 const Contatos = () => {
+  useDocumentTitle("Contatos", "Família, aniversários e datas importantes — Luize Blond");
   const { user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [contacts, setContacts] = useState<Contact[]>([]);

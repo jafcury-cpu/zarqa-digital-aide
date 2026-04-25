@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { getFallbackFinanceData, getFinanceData, type FinanceData } from "@/lib/zarqa-cloud-data";
 import { BankAccountFormDialog } from "@/components/zarqa/bank-account-form-dialog";
 import { CreditCardFormDialog } from "@/components/zarqa/credit-card-form-dialog";
@@ -125,6 +126,7 @@ const toneStyles: Record<Metric["tone"], string> = {
 const FinanceCategoryChart = lazy(() => import("@/components/zarqa/finance-category-chart"));
 
 const Financeiro = () => {
+  useDocumentTitle("Financeiro", "Liquidez, gastos e vencimentos — Luize Blond");
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);

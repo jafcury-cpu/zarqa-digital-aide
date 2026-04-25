@@ -7,6 +7,7 @@ import { SectionCard } from "@/components/zarqa/section-card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSaoPauloTime } from "@/hooks/use-sao-paulo-time";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 import { getDashboardData, getFallbackDashboardData, type DashboardData } from "@/lib/zarqa-cloud-data";
 import {
   briefingText,
@@ -24,6 +25,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState<DashboardData>(getFallbackDashboardData());
   const { full, short } = useSaoPauloTime();
+  useDocumentTitle("Dashboard", "Resumo executivo do dia — Luize Blond Chief of Staff Digital");
 
   useEffect(() => {
     let cancelled = false;

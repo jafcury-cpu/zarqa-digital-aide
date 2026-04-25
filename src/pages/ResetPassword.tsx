@@ -2,8 +2,10 @@ import { ArrowLeft, Chrome, ShieldCheck } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 const ResetPassword = () => {
+  useDocumentTitle("Recuperar acesso", "Recuperação de acesso — Luize Blond");
   return (
     <div className="grid min-h-screen bg-background lg:grid-cols-[1.1fr_0.9fr]">
       <section className="relative hidden overflow-hidden border-r border-border lg:flex lg:flex-col lg:justify-between lg:p-10">

@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { SectionCard } from "@/components/zarqa/section-card";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 type Channel = "whatsapp" | "email" | "instagram" | "linkedin" | "facebook";
 type MsgStatus = "pending" | "replied" | "archived";
@@ -43,6 +44,7 @@ const channelConfig: Record<Channel, { label: string; color: string; icon: strin
 };
 
 const Comunicacoes = () => {
+  useDocumentTitle("Comunicações", "Hub de canais e secretária IA — Luize Blond");
   const { user } = useAuth();
   const { toast } = useToast();
   const [messages, setMessages] = useState<CommMessage[]>([]);

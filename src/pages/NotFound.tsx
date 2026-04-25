@@ -2,8 +2,10 @@ import { ArrowLeft } from "lucide-react";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useDocumentTitle } from "@/hooks/use-document-title";
 
 const NotFound = () => {
+  useDocumentTitle("Página não encontrada", "Rota inexistente — Luize Blond");
   const location = useLocation();
 
   useEffect(() => {
