@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 
 const BRAND = "Luize Blond";
-const DEFAULT_DESCRIPTION = "Luize Blond — Chief of Staff Digital";
+const DEFAULT_DESCRIPTION = "ZARQA ٢٨ — Chief of Staff Digital. Painel executivo privado para coordenar agenda, finanças, saúde e documentos.";
 
 function setMeta(selector: string, attr: "content", value: string) {
   const el = document.querySelector<HTMLMetaElement>(selector);
