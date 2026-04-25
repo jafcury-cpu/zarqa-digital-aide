@@ -22,7 +22,10 @@ import { Label } from "@/components/ui/label";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { dictionary, t } from "@/lib/i18n";
 import { getUsage, getUsageCount } from "@/lib/i18n-usage";
-import { buildI18nExport, type ExportFormat } from "@/lib/i18n-export";
+import {
+  buildI18nExport,
+  buildI18nXlsxExport,
+} from "@/lib/i18n-export";
 import { toast } from "sonner";
 
 
