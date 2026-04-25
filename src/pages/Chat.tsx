@@ -394,7 +394,7 @@ const Chat = () => {
         className="min-h-[72vh]"
         contentClassName="flex h-full flex-col"
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant={STATUS_BADGE[status].variant}>{STATUS_BADGE[status].label}</Badge>
             <Button
               type="button"
@@ -408,6 +408,54 @@ const Chat = () => {
               <RefreshCw className={`size-3.5 ${status === "checking" ? "animate-spin" : ""}`} />
               Testar
             </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => { void handleExport(); }}
+              disabled={exporting || loading || messages.length === 0}
+              className="h-8 gap-1.5"
+              aria-label="Exportar histórico em JSON"
+            >
+              <Download className="size-3.5" />
+              {exporting ? "Exportando..." : "Exportar"}
+            </Button>
+            <AlertDialog open={confirmClearOpen} onOpenChange={setConfirmClearOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  disabled={clearing || loading || messages.length === 0}
+                  className="h-8 gap-1.5 border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  aria-label="Limpar histórico do chat"
+                >
+                  <Trash2 className="size-3.5" />
+                  Limpar
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Limpar todo o histórico?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Esta ação remove permanentemente todas as mensagens deste usuário no banco. Não há como desfazer.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={clearing}>Cancelar</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={(event) => {
+                      event.preventDefault();
+                      void handleClearHistory();
+                    }}
+                    disabled={clearing}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    {clearing ? "Limpando..." : "Sim, limpar tudo"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         }
       >
