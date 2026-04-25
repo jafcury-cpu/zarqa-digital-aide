@@ -138,7 +138,21 @@ export default function I18nPreview() {
           </p>
         </header>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={area} onValueChange={setArea}>
+            <SelectTrigger className="h-9 w-[200px]" aria-label="Filtrar por área">
+              <SelectValue placeholder="Área" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Todas as áreas</SelectItem>
+              {areas.map((a) => (
+                <SelectItem key={a} value={a}>
+                  {a}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Button
             type="button"
             variant="outline"
@@ -146,7 +160,7 @@ export default function I18nPreview() {
             onClick={() => handleExport("json", filtered)}
           >
             <Download className="mr-2 size-4" />
-            Exportar JSON
+            JSON (visível)
           </Button>
           <Button
             type="button"
@@ -155,8 +169,32 @@ export default function I18nPreview() {
             onClick={() => handleExport("csv", filtered)}
           >
             <Download className="mr-2 size-4" />
-            Exportar CSV
+            CSV (visível)
           </Button>
+
+          {area !== "__all__" && (
+            <>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={() => handleExport("json", byArea)}
+              >
+                <Download className="mr-2 size-4" />
+                JSON da área “{area}”
+              </Button>
+              <Button
+                type="button"
+                variant="default"
+                size="sm"
+                onClick={() => handleExport("csv", byArea)}
+              >
+                <Download className="mr-2 size-4" />
+                CSV da área “{area}”
+              </Button>
+            </>
+          )}
+
           <Button
             type="button"
             variant="secondary"
@@ -164,7 +202,7 @@ export default function I18nPreview() {
             onClick={() => handleExport("json")}
           >
             <Download className="mr-2 size-4" />
-            Exportar tudo (JSON)
+            Tudo (JSON)
           </Button>
           <Button
             type="button"
@@ -173,10 +211,12 @@ export default function I18nPreview() {
             onClick={() => handleExport("csv")}
           >
             <Download className="mr-2 size-4" />
-            Exportar tudo (CSV)
+            Tudo (CSV)
           </Button>
+
           <span className="self-center text-xs text-muted-foreground">
-            Filtrado: {filtered.length} · Total: {allEntries.length}
+            Visível: {filtered.length}
+            {area !== "__all__" ? ` · Área: ${areaCount}` : ""} · Total: {total}
           </span>
         </div>
 
