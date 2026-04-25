@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n";
 import { lazy, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { DeferredLazySection } from "@/components/luize/deferred-lazy-section";

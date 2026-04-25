@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n";
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Download, Search, UploadCloud } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";

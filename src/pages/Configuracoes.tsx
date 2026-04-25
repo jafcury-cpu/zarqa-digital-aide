@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { BellRing, Link2, Save } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";

@@ -1,3 +1,4 @@
+import { t } from "@/lib/i18n";
 import { useEffect, useState } from "react";
 import { Activity, ArrowUpRight, CalendarClock, FileWarning, Siren, WalletCards } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
