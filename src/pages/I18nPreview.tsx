@@ -255,17 +255,27 @@ export default function I18nPreview() {
                 <ul className="divide-y divide-border">
                   {group.entries.map(({ key, value }) => {
                     const usageCount = getUsageCount(key);
+                    const computedArea = key.includes(".")
+                      ? key.split(".")[0]
+                      : "outros";
                     return (
                       <li key={key}>
                         <button
                           type="button"
                           onClick={() => setSelectedKey(key)}
-                          className="grid w-full gap-2 rounded py-2 text-left transition hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:grid-cols-[minmax(220px,1fr)_2fr_auto] md:items-baseline md:gap-6"
+                          className="grid w-full gap-2 rounded py-2 text-left transition hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:grid-cols-[minmax(220px,1fr)_auto_2fr_auto] md:items-baseline md:gap-6"
                           aria-label={`Ver ocorrências de ${key}`}
                         >
                           <code className="font-mono text-xs text-accent-blue break-all">
                             {key}
                           </code>
+                          <Badge
+                            variant="secondary"
+                            className="justify-self-start font-mono text-[10px] uppercase tracking-wider"
+                            title={`Área calculada: ${computedArea}`}
+                          >
+                            {computedArea}
+                          </Badge>
                           <span className="text-sm text-foreground">{value}</span>
                           <Badge
                             variant={usageCount === 0 ? "destructive" : "outline"}
