@@ -92,9 +92,13 @@ export function buildI18nExport(
 
   validateEntries(data, { requireFull: isFull });
 
+  const withArea = data.map(([k, v]) => {
+    const area = k.includes(".") ? k.split(".")[0] : "outros";
+    return { key: k, area, value: v };
+  });
+
   if (format === "json") {
-    const obj = Object.fromEntries(data);
-    const content = JSON.stringify(obj, null, 2);
+    const content = JSON.stringify(withArea, null, 2);
     return {
       format,
       filename: isFull ? "luize-i18n-completo.json" : "luize-i18n.json",
@@ -104,9 +108,10 @@ export function buildI18nExport(
     };
   }
 
-  const header = "key,value";
-  const rows = data.map(
-    ([k, v]) => `${escapeCsvField(k)},${escapeCsvField(v)}`,
+  const header = "key,area,value";
+  const rows = withArea.map(
+    ({ key, area, value }) =>
+      `${escapeCsvField(key)},${escapeCsvField(area)},${escapeCsvField(value)}`,
   );
   return {
     format: "csv",
