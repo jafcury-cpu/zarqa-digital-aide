@@ -119,6 +119,23 @@ export default function I18nPreview() {
       .map(([name, count]) => ({ name, count }));
   }, [allEntries]);
 
+  // Se a área salva não existe mais no dicionário, faz fallback para "__all__".
+  useEffect(() => {
+    if (area === "__all__") return;
+    if (!areas.some((a) => a.name === area)) {
+      setArea("__all__");
+    }
+  }, [area, areas]);
+
+  // Persiste o filtro de área para sobreviver a recargas e exports.
+  useEffect(() => {
+    try {
+      window.localStorage.setItem("i18n-preview:area", area);
+    } catch {
+      /* ignore */
+    }
+  }, [area]);
+
   const byArea = useMemo(() => {
     if (area === "__all__") return allEntries;
     return allEntries.filter(
