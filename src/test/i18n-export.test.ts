@@ -218,4 +218,41 @@ describe("i18n-export", () => {
     expect(rows[2][1]).toBe("dashboard");
     expect(rows[2][2]).toBe('briefing\ncom "aspas", e vírgulas');
   });
+
+  it("JSON: values com vírgula, aspas e quebras de linha preservam conteúdo + estrutura {key,area,value}", () => {
+    const tricky: [string, string][] = [
+      ["brand.name", 'Luize, "a Luize"\nlinha 2'],
+      ["common.save", 'salvar, "agora"'],
+      ["dashboard.eyebrow.briefing", 'briefing\ncom "aspas", e vírgulas\te tab'],
+    ];
+    const out = buildI18nExport("json", tricky as never);
+    expect(out.format).toBe("json");
+    expect(out.mime).toBe("application/json");
+    expect(out.totalKeys).toBe(3);
+
+    const parsed = JSON.parse(out.content) as Array<{
+      key: string;
+      area: string;
+      value: string;
+    }>;
+    expect(parsed).toHaveLength(3);
+
+    const expectedAreas: Record<string, string> = {
+      "brand.name": "brand",
+      "common.save": "common",
+      "dashboard.eyebrow.briefing": "dashboard",
+    };
+
+    for (let i = 0; i < tricky.length; i++) {
+      const [origKey, origValue] = tricky[i];
+      const item = parsed[i];
+      // Estrutura exata, na ordem certa
+      expect(Object.keys(item)).toEqual(["key", "area", "value"]);
+      expect(item.key).toBe(origKey);
+      expect(item.area).toBe(expectedAreas[origKey]);
+      // Conteúdo bit-a-bit preservado (vírgulas, aspas, \n, \t)
+      expect(item.value).toBe(origValue);
+      expect(item.value.length).toBe(origValue.length);
+    }
+  });
 });
