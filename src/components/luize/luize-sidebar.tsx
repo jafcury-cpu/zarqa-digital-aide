@@ -76,14 +76,13 @@ export function LuizeSidebar() {
             </div>
             {!collapsed ? (
               <div>
-                <p className="font-display text-lg tracking-[0.2em] text-sidebar-foreground">Luize Blond</p>
-                <p className="text-xs uppercase tracking-[0.24em] text-sidebar-foreground/60">Chief of Staff Digital</p>
+                <p className="font-display text-lg tracking-[0.2em] text-sidebar-foreground">Luize</p>
               </div>
             ) : null}
           </div>
           {!collapsed ? (
             <Badge variant="outline" className="w-fit border-sidebar-border text-sidebar-foreground/80">
-              Single-user secure mode
+              Modo seguro de usuário único
             </Badge>
           ) : null}
         </div>
