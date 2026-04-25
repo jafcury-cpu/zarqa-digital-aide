@@ -168,17 +168,30 @@ export default function I18nPreview() {
                   <Badge variant="outline">{group.entries.length}</Badge>
                 </header>
                 <ul className="divide-y divide-border">
-                  {group.entries.map(({ key, value }) => (
-                    <li
-                      key={key}
-                      className="grid gap-2 py-2 md:grid-cols-[minmax(220px,1fr)_2fr] md:items-baseline md:gap-6"
-                    >
-                      <code className="font-mono text-xs text-accent-blue break-all">
-                        {key}
-                      </code>
-                      <span className="text-sm text-foreground">{value}</span>
-                    </li>
-                  ))}
+                  {group.entries.map(({ key, value }) => {
+                    const usageCount = getUsageCount(key);
+                    return (
+                      <li key={key}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedKey(key)}
+                          className="grid w-full gap-2 rounded py-2 text-left transition hover:bg-muted/40 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring md:grid-cols-[minmax(220px,1fr)_2fr_auto] md:items-baseline md:gap-6"
+                          aria-label={`Ver ocorrências de ${key}`}
+                        >
+                          <code className="font-mono text-xs text-accent-blue break-all">
+                            {key}
+                          </code>
+                          <span className="text-sm text-foreground">{value}</span>
+                          <Badge
+                            variant={usageCount === 0 ? "destructive" : "outline"}
+                            className="justify-self-start md:justify-self-end"
+                          >
+                            {usageCount} uso{usageCount === 1 ? "" : "s"}
+                          </Badge>
+                        </button>
+                      </li>
+                    );
+                  })}
                 </ul>
               </section>
             ))}
