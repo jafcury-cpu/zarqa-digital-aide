@@ -126,6 +126,7 @@ const toneStyles: Record<Metric["tone"], string> = {
 const FinanceCategoryChart = lazy(() => import("@/components/zarqa/finance-category-chart"));
 
 const Financeiro = () => {
+  useDocumentTitle("Financeiro", "Liquidez, gastos e vencimentos — Luize Blond");
   const { user } = useAuth();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
