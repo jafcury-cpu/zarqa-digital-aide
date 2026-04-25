@@ -152,4 +152,70 @@ describe("i18n-export", () => {
       expect(Object.keys(item)).toEqual(["key", "area", "value"]);
     }
   });
+
+  it("CSV: values com vírgula, aspas e quebras de linha mantêm ordem key,area,value", () => {
+    const tricky: [string, string][] = [
+      ["brand.name", 'Luize, "a Luize"\nlinha 2'],
+      ["common.save", 'salvar, "agora"'],
+      ["dashboard.eyebrow.briefing", 'briefing\ncom "aspas", e vírgulas'],
+    ];
+    const out = buildI18nExport("csv", tricky as never);
+    const lines = out.content.split(/\r?\n/);
+    expect(lines[0]).toBe("key,area,value");
+
+    // Reparser CSV mínimo respeitando aspas para validar 3 colunas por linha lógica
+    const body = lines.slice(1).join("\n");
+    const rows: string[][] = [];
+    let cur: string[] = [];
+    let field = "";
+    let inQuotes = false;
+    for (let i = 0; i < body.length; i++) {
+      const ch = body[i];
+      if (inQuotes) {
+        if (ch === '"' && body[i + 1] === '"') {
+          field += '"';
+          i++;
+        } else if (ch === '"') {
+          inQuotes = false;
+        } else {
+          field += ch;
+        }
+      } else {
+        if (ch === '"') inQuotes = true;
+        else if (ch === ",") {
+          cur.push(field);
+          field = "";
+        } else if (ch === "\n") {
+          cur.push(field);
+          rows.push(cur);
+          cur = [];
+          field = "";
+        } else {
+          field += ch;
+        }
+      }
+    }
+    if (field.length > 0 || cur.length > 0) {
+      cur.push(field);
+      rows.push(cur);
+    }
+
+    expect(rows).toHaveLength(3);
+    for (const row of rows) {
+      expect(row).toHaveLength(3); // key, area, value — sem vazamento de colunas
+    }
+
+    // Cada area deve corresponder ao primeiro segmento da key
+    expect(rows[0][0]).toBe("brand.name");
+    expect(rows[0][1]).toBe("brand");
+    expect(rows[0][2]).toBe('Luize, "a Luize"\nlinha 2');
+
+    expect(rows[1][0]).toBe("common.save");
+    expect(rows[1][1]).toBe("common");
+    expect(rows[1][2]).toBe('salvar, "agora"');
+
+    expect(rows[2][0]).toBe("dashboard.eyebrow.briefing");
+    expect(rows[2][1]).toBe("dashboard");
+    expect(rows[2][2]).toBe('briefing\ncom "aspas", e vírgulas');
+  });
 });
