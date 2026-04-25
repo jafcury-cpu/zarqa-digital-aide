@@ -91,7 +91,7 @@ export function validateEntries(
  * Se `entries` é omitido, exporta o dicionário completo.
  */
 export function buildI18nExport(
-  format: ExportFormat,
+  format: "json" | "csv",
   entries?: ReadonlyArray<readonly [string, string]>,
 ): I18nExport {
   const isFull = entries === undefined;
@@ -126,6 +126,45 @@ export function buildI18nExport(
     filename: isFull ? "luize-i18n-completo.csv" : "luize-i18n.csv",
     mime: "text/csv",
     content: [header, ...rows].join("\n"),
+    totalKeys: data.length,
+  };
+}
+
+/**
+ * Versão XLSX do export (binária). Mantém a mesma ordem de colunas
+ * `key,area,value` e preserva textos com vírgulas, aspas e quebras de linha.
+ */
+export async function buildI18nXlsxExport(
+  entries?: ReadonlyArray<readonly [string, string]>,
+): Promise<I18nBinaryExport> {
+  const isFull = entries === undefined;
+  const data: ReadonlyArray<readonly [string, string]> =
+    entries ?? (Object.entries(dictionary) as [string, string][]);
+
+  validateEntries(data, { requireFull: isFull });
+
+  const withArea = data.map(([k, v]) => {
+    const area = k.includes(".") ? k.split(".")[0] : "outros";
+    return [k, area, v] as [string, string, string];
+  });
+
+  // Import dinâmico evita carregar exceljs em bundles que não exportam xlsx.
+  const ExcelJS = (await import("exceljs")).default;
+  const wb = new ExcelJS.Workbook();
+  const ws = wb.addWorksheet("i18n");
+  ws.addRow(["key", "area", "value"]);
+  for (const row of withArea) ws.addRow(row);
+
+  // Texto com quebras de linha precisa de wrapText para renderizar; o conteúdo
+  // já é preservado de qualquer forma.
+  ws.getColumn(3).alignment = { wrapText: true, vertical: "top" };
+
+  const buf = await wb.xlsx.writeBuffer();
+  return {
+    format: "xlsx",
+    filename: isFull ? "luize-i18n-completo.xlsx" : "luize-i18n.xlsx",
+    mime: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    content: new Uint8Array(buf as ArrayBuffer),
     totalKeys: data.length,
   };
 }
