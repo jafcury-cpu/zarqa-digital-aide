@@ -163,7 +163,7 @@ export default function I18nPreview() {
   const areaCount = byArea.length;
 
   function handleExport(
-    format: ExportFormat,
+    format: "json" | "csv",
     entries?: ReadonlyArray<readonly [string, string]>,
   ) {
     try {
@@ -177,6 +177,31 @@ export default function I18nPreview() {
         err instanceof Error ? err.message : "Erro desconhecido ao exportar.";
       toast.error("Falha ao exportar dicionário", { description: message });
       if (import.meta.env?.DEV) console.error("[i18n-export]", err);
+    }
+  }
+
+  async function handleExportXlsx(
+    entries?: ReadonlyArray<readonly [string, string]>,
+  ) {
+    try {
+      const out = await buildI18nXlsxExport(entries);
+      const blob = new Blob([out.content], { type: out.mime });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = out.filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      toast.success(
+        `Exportado ${out.totalKeys} chave${out.totalKeys === 1 ? "" : "s"} (XLSX).`,
+      );
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Erro desconhecido ao exportar.";
+      toast.error("Falha ao exportar XLSX", { description: message });
+      if (import.meta.env?.DEV) console.error("[i18n-export-xlsx]", err);
     }
   }
 
