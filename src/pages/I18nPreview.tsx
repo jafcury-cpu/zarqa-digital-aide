@@ -62,7 +62,28 @@ export default function I18nPreview() {
   useDocumentTitle("Dicionário i18n");
   const [query, setQuery] = useState("");
   const [area, setArea] = useState<string>("__all__");
-  const [combineSearch, setCombineSearch] = useState<boolean>(true);
+  const [combineSearch, setCombineSearch] = useState<boolean>(() => {
+    if (typeof window === "undefined") return true;
+    try {
+      const raw = window.localStorage.getItem("i18n-preview:combineSearch");
+      if (raw === "true") return true;
+      if (raw === "false") return false;
+    } catch {
+      /* ignore */
+    }
+    return true;
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        "i18n-preview:combineSearch",
+        String(combineSearch),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [combineSearch]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   const selectedOccurrences = useMemo(
