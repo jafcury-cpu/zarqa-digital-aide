@@ -66,8 +66,8 @@ const Configuracoes = () => {
       } else if (data) {
         setWebhookUrl(data.webhook_url ?? "");
         setTimezone(data.timezone ?? "America/Sao_Paulo");
-        setTelegramBotToken((data as Record<string, unknown>).telegram_bot_token as string ?? "");
-        setTelegramChatId((data as Record<string, unknown>).telegram_chat_id as string ?? "");
+        setTelegramBotToken(data.telegram_bot_token ?? "");
+        setTelegramChatId(data.telegram_chat_id ?? "");
       }
       setLoading(false);
     };
@@ -92,7 +92,7 @@ const Configuracoes = () => {
         timezone,
         telegram_bot_token: telegramBotToken || null,
         telegram_chat_id: telegramChatId || null,
-      } as Record<string, unknown>,
+      },
       { onConflict: "user_id" },
     );
 
