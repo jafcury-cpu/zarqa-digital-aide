@@ -100,14 +100,7 @@ export default function I18nPreview() {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => {
-              const payload = JSON.stringify(
-                Object.fromEntries(filtered),
-                null,
-                2,
-              );
-              downloadFile("luize-i18n.json", payload, "application/json");
-            }}
+            onClick={() => handleExport("json", filtered)}
           >
             <Download className="mr-2 size-4" />
             Exportar JSON
@@ -116,14 +109,7 @@ export default function I18nPreview() {
             type="button"
             variant="outline"
             size="sm"
-            onClick={() => {
-              const header = "key,value";
-              const rows = filtered.map(
-                ([key, value]) => `${escapeCsvField(key)},${escapeCsvField(value)}`,
-              );
-              const csv = [header, ...rows].join("\n");
-              downloadFile("luize-i18n.csv", csv, "text/csv");
-            }}
+            onClick={() => handleExport("csv", filtered)}
           >
             <Download className="mr-2 size-4" />
             Exportar CSV
@@ -132,10 +118,7 @@ export default function I18nPreview() {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => {
-              const payload = JSON.stringify(dictionary, null, 2);
-              downloadFile("luize-i18n-completo.json", payload, "application/json");
-            }}
+            onClick={() => handleExport("json")}
           >
             <Download className="mr-2 size-4" />
             Exportar tudo (JSON)
@@ -144,14 +127,7 @@ export default function I18nPreview() {
             type="button"
             variant="secondary"
             size="sm"
-            onClick={() => {
-              const header = "key,value";
-              const rows = allEntries.map(
-                ([key, value]) => `${escapeCsvField(key)},${escapeCsvField(value)}`,
-              );
-              const csv = [header, ...rows].join("\n");
-              downloadFile("luize-i18n-completo.csv", csv, "text/csv");
-            }}
+            onClick={() => handleExport("csv")}
           >
             <Download className="mr-2 size-4" />
             Exportar tudo (CSV)
