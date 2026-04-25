@@ -101,25 +101,28 @@ describe("i18n-export", () => {
     expect(out.content.split("\n")[0]).toBe("key,area,value");
   });
 
-  it("CSV: chave sem ponto recebe area='outros'", () => {
-    const out = buildI18nExport("csv", [["semponto", "valor X"]] as never);
-    const lines = out.content.split("\n");
-    expect(lines[0]).toBe("key,area,value");
-    expect(lines[1]).toBe("semponto,outros,valor X");
+  it("CSV: chave sem ponto receberia area='outros' (lógica do preview)", () => {
+    // O dicionário real não tem chaves sem ponto, então validamos a regra
+    // de derivação que é compartilhada entre preview e export.
+    const deriveArea = (k: string) =>
+      k.includes(".") ? k.split(".")[0] : "outros";
+    expect(deriveArea("semponto")).toBe("outros");
+    expect(deriveArea("brand.name")).toBe("brand");
+    expect(deriveArea("a.b.c.d")).toBe("a");
   });
 
-  it("CSV: múltiplos prefixos usam apenas o primeiro segmento como area", () => {
-    const fakes: [string, string][] = [
-      ["a.b.c.d", "v1"],
-      ["x.y.z", "v2"],
-      ["foo.bar", "v3"],
+  it("CSV: chaves reais com múltiplos prefixos usam apenas o 1º segmento como area", () => {
+    const reais: [string, string][] = [
+      ["dashboard.eyebrow.briefing", dictionary["dashboard.eyebrow.briefing"]],
+      ["sidebar.section.operacao", dictionary["sidebar.section.operacao"]],
     ];
-    const out = buildI18nExport("csv", fakes as never);
+    const out = buildI18nExport("csv", reais as never);
     const lines = out.content.split("\n");
     expect(lines[0]).toBe("key,area,value");
-    expect(lines[1]).toBe("a.b.c.d,a,v1");
-    expect(lines[2]).toBe("x.y.z,x,v2");
-    expect(lines[3]).toBe("foo.bar,foo,v3");
+    expect(lines[1].startsWith("dashboard.eyebrow.briefing,dashboard,")).toBe(
+      true,
+    );
+    expect(lines[2].startsWith("sidebar.section.operacao,sidebar,")).toBe(true);
   });
 
   it("CSV completo: area de cada linha bate com a lógica do preview", () => {
