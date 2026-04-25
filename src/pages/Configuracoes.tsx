@@ -94,7 +94,7 @@ const Configuracoes = () => {
 
   return (
     <div className="grid gap-4 xl:grid-cols-[1.2fr_0.8fr]">
-      <SectionCard title="Integrações da Luize Blond" description="Webhook do chat e timezone operacional" eyebrow="Control settings">
+      <SectionCard title="Integrações da Luize" description="Webhook do chat e timezone operacional" eyebrow="Control settings">
         <form className="space-y-5" onSubmit={handleSave}>
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">Webhook URL</label>

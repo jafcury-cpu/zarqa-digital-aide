@@ -80,7 +80,7 @@ const Dashboard = () => {
         <div className="relative z-10 grid gap-6 lg:grid-cols-[1.5fr_0.8fr] lg:items-end">
           <div className="space-y-3">
             <p className="text-kicker">Central de Operação Pessoal</p>
-            <h2 className="text-4xl font-semibold tracking-tight text-foreground">Luize Blond</h2>
+            <h2 className="text-4xl font-semibold tracking-tight text-foreground">Luize</h2>
             <p className="max-w-2xl text-base text-muted-foreground">
               Painel executivo para coordenar compromissos, alertas críticos, finanças e saúde com visão única.
             </p>
