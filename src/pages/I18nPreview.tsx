@@ -61,7 +61,16 @@ function groupByArea(entries: [string, string][]): Group[] {
 export default function I18nPreview() {
   useDocumentTitle("Dicionário i18n");
   const [query, setQuery] = useState("");
-  const [area, setArea] = useState<string>("__all__");
+  const [area, setArea] = useState<string>(() => {
+    if (typeof window === "undefined") return "__all__";
+    try {
+      const raw = window.localStorage.getItem("i18n-preview:area");
+      if (raw && typeof raw === "string") return raw;
+    } catch {
+      /* ignore */
+    }
+    return "__all__";
+  });
   const [combineSearch, setCombineSearch] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     try {
