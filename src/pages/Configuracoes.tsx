@@ -99,7 +99,7 @@ const Configuracoes = () => {
             <Input
               value={webhookUrl}
               onChange={(event) => setWebhookUrl(event.target.value)}
-              placeholder="https://seu-n8n/webhook/zarqa"
+              placeholder="https://seu-n8n/webhook/luize-blond"
               disabled={loading}
               aria-invalid={Boolean(webhookError)}
               className={cn(webhookError && "border-destructive focus-visible:ring-destructive")}
