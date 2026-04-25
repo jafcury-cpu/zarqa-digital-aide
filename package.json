@@ -5,12 +5,14 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "npm run test && npm run test:e2e",
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:e2e": "node -e \"const fs=require('fs');const dirs=['e2e','tests'];const has=dirs.some(d=>fs.existsSync(d)&&fs.readdirSync(d,{recursive:true}).some(f=>/\\.(spec|test)\\.(ts|tsx|js)$/.test(String(f))));if(!has){console.log('[test:e2e] Nenhum spec Playwright encontrado, ignorando.');process.exit(0);}require('child_process').execSync('npx playwright test',{stdio:'inherit'});\""
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
