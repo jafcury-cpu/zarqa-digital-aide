@@ -100,8 +100,9 @@ const Comunicacoes = () => {
         setEditedReply(data.reply.ai_suggestion);
         toast({ title: "Sugestão gerada", description: "Revise e aprove antes de enviar." });
       }
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Erro ao gerar sugestão", description: e.message });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      toast({ variant: "destructive", title: "Erro ao gerar sugestão", description: message });
     } finally {
       setSuggestingId(null);
     }
@@ -122,8 +123,9 @@ const Comunicacoes = () => {
       // TODO: conectar com n8n webhook para envio real da resposta
       toast({ title: "Resposta aprovada", description: "Aguardando envio pelo n8n." });
       fetchData();
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Erro", description: e.message });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      toast({ variant: "destructive", title: "Erro", description: message });
     } finally {
       setSendingId(null);
     }

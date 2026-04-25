@@ -2,7 +2,7 @@ import { ComponentType, LazyExoticComponent, Suspense, useEffect, useRef, useSta
 import { LoadingPanel } from "@/components/luize/loading-panel";
 
 type DeferredLazySectionProps = {
-  component: LazyExoticComponent<ComponentType<any>>;
+  component: LazyExoticComponent<ComponentType<Record<string, unknown>>>;
   componentProps?: Record<string, unknown>;
   minHeightClassName?: string;
 };
