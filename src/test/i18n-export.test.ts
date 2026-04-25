@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { dictionary } from "@/lib/i18n";
-import { buildI18nExport, validateEntries } from "@/lib/i18n-export";
+import {
+  buildI18nExport,
+  buildI18nXlsxExport,
+  validateEntries,
+} from "@/lib/i18n-export";
+import ExcelJS from "exceljs";
 
 describe("i18n-export", () => {
   it("dicionário não tem chaves ou valores vazios", () => {
