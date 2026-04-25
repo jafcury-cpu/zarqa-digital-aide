@@ -393,4 +393,87 @@ describe("i18n-export", () => {
       expect(trickyRoundTripped[i].area).toBe(tricky[i][0].split(".")[0]);
     }
   });
+
+  it("round-trip CSV: exportar → reimportar preserva key, area e value (com vírgulas, aspas e \\n)", () => {
+    // Parser CSV (RFC4180-ish) com suporte a aspas escapadas e quebras de linha dentro de campos.
+    function parseCsv(text: string): string[][] {
+      const rows: string[][] = [];
+      let cur: string[] = [];
+      let field = "";
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (inQuotes) {
+          if (ch === '"' && text[i + 1] === '"') {
+            field += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            field += ch;
+          }
+        } else if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === ",") {
+          cur.push(field);
+          field = "";
+        } else if (ch === "\n") {
+          cur.push(field);
+          rows.push(cur);
+          cur = [];
+          field = "";
+        } else if (ch === "\r") {
+          // ignora CR (fica para o \n tratar a quebra)
+        } else {
+          field += ch;
+        }
+      }
+      if (field.length > 0 || cur.length > 0) {
+        cur.push(field);
+        rows.push(cur);
+      }
+      return rows;
+    }
+
+    // 1) Round-trip do dicionário completo
+    const out = buildI18nExport("csv");
+    const rows = parseCsv(out.content);
+    expect(rows[0]).toEqual(["key", "area", "value"]);
+    const body = rows.slice(1);
+    expect(body).toHaveLength(Object.keys(dictionary).length);
+    const dictMap = dictionary as Record<string, string>;
+    for (const [key, area, value] of body) {
+      expect(value).toBe(dictMap[key]);
+      const expectedArea = key.includes(".") ? key.split(".")[0] : "outros";
+      expect(area).toBe(expectedArea);
+    }
+
+    // 2) Round-trip com caracteres tricky
+    const tricky: [string, string][] = [
+      ["brand.name", 'Luize, "a Luize"\nlinha 2'],
+      ["common.save", 'salvar, "agora"'],
+      ["dashboard.eyebrow.briefing", 'briefing\ncom "aspas", e vírgulas\te tab'],
+    ];
+    const trickyOut = buildI18nExport("csv", tricky as never);
+    const trickyRows = parseCsv(trickyOut.content);
+    expect(trickyRows[0]).toEqual(["key", "area", "value"]);
+    const trickyBody = trickyRows.slice(1);
+    expect(trickyBody).toHaveLength(tricky.length);
+
+    for (let i = 0; i < tricky.length; i++) {
+      const [origKey, origValue] = tricky[i];
+      const [reKey, reArea, reValue] = trickyBody[i];
+      expect(reKey).toBe(origKey);
+      expect(reArea).toBe(origKey.split(".")[0]);
+      expect(reValue).toBe(origValue); // preserva vírgulas, aspas, \n e \t
+      expect(reValue.length).toBe(origValue.length);
+    }
+
+    // 3) Re-export: reimportado → exportado novamente deve gerar conteúdo idêntico
+    const reExportTuples: [string, string][] = trickyBody.map(
+      ([k, , v]) => [k, v] as [string, string],
+    );
+    const reExported = buildI18nExport("csv", reExportTuples as never);
+    expect(reExported.content).toBe(trickyOut.content);
+  });
 });
