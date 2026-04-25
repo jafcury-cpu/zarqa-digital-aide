@@ -13,7 +13,7 @@ const MAX_MESSAGE_LENGTH = 4000;
 
 const bodySchema = z.object({
   message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
-  source: z.string().trim().min(1).max(100).optional().default("zarqa-chat"),
+  source: z.string().trim().min(1).max(100).optional().default("luize-chat"),
   history: z
     .array(
       z.object({

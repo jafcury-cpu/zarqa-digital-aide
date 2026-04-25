@@ -2,13 +2,13 @@ import { useEffect, useState } from "react";
 import { Activity, ArrowUpRight, CalendarClock, FileWarning, Siren, WalletCards } from "lucide-react";
 import { Line, LineChart, ResponsiveContainer } from "recharts";
 import { useAuth } from "@/components/auth/auth-provider";
-import { LoadingPanel } from "@/components/zarqa/loading-panel";
-import { SectionCard } from "@/components/zarqa/section-card";
+import { LoadingPanel } from "@/components/luize/loading-panel";
+import { SectionCard } from "@/components/luize/section-card";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useSaoPauloTime } from "@/hooks/use-sao-paulo-time";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { getDashboardData, getFallbackDashboardData, type DashboardData } from "@/lib/zarqa-cloud-data";
+import { getDashboardData, getFallbackDashboardData, type DashboardData } from "@/lib/luize-cloud-data";
 import {
   briefingText,
   formatCurrency,
@@ -17,7 +17,7 @@ import {
   getStatusVariant,
   priorityLabel,
   upcomingAppointments,
-} from "@/lib/zarqa-mocks";
+} from "@/lib/luize-mocks";
 
 const Dashboard = () => {
   const { user } = useAuth();

@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { supabase } from "@/integrations/supabase/client";
-import { SectionCard } from "@/components/zarqa/section-card";
-import { LoadingPanel } from "@/components/zarqa/loading-panel";
+import { SectionCard } from "@/components/luize/section-card";
+import { LoadingPanel } from "@/components/luize/loading-panel";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ContactFormDialog, FAMILY_MEMBERS, CATEGORIES, type Contact } from "@/components/zarqa/contact-form-dialog";
-import { ImportantDateFormDialog, type ImportantDate } from "@/components/zarqa/important-date-form-dialog";
+import { ContactFormDialog, FAMILY_MEMBERS, CATEGORIES, type Contact } from "@/components/luize/contact-form-dialog";
+import { ImportantDateFormDialog, type ImportantDate } from "@/components/luize/important-date-form-dialog";
 import { Cake, CalendarHeart, Gift, Mail, Phone, Star, User, Users } from "lucide-react";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 

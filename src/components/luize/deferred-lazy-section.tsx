@@ -1,5 +1,5 @@
 import { ComponentType, LazyExoticComponent, Suspense, useEffect, useRef, useState } from "react";
-import { LoadingPanel } from "@/components/zarqa/loading-panel";
+import { LoadingPanel } from "@/components/luize/loading-panel";
 
 type DeferredLazySectionProps = {
   component: LazyExoticComponent<ComponentType<any>>;

@@ -1,9 +1,9 @@
 import { lazy, useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { supabase } from "@/integrations/supabase/client";
-import { DeferredLazySection } from "@/components/zarqa/deferred-lazy-section";
-import { LoadingPanel } from "@/components/zarqa/loading-panel";
-import { SectionCard } from "@/components/zarqa/section-card";
+import { DeferredLazySection } from "@/components/luize/deferred-lazy-section";
+import { LoadingPanel } from "@/components/luize/loading-panel";
+import { SectionCard } from "@/components/luize/section-card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
@@ -12,15 +12,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { getFallbackFinanceData, getFinanceData, type FinanceData } from "@/lib/zarqa-cloud-data";
-import { BankAccountFormDialog } from "@/components/zarqa/bank-account-form-dialog";
-import { CreditCardFormDialog } from "@/components/zarqa/credit-card-form-dialog";
-import { ReconciliationFormDialog } from "@/components/zarqa/reconciliation-form-dialog";
+import { getFallbackFinanceData, getFinanceData, type FinanceData } from "@/lib/luize-cloud-data";
+import { BankAccountFormDialog } from "@/components/luize/bank-account-form-dialog";
+import { CreditCardFormDialog } from "@/components/luize/credit-card-form-dialog";
+import { ReconciliationFormDialog } from "@/components/luize/reconciliation-form-dialog";
 import {
   formatCurrency,
   formatDate,
   getStatusVariant,
-} from "@/lib/zarqa-mocks";
+} from "@/lib/luize-mocks";
 import {
   ArrowUpRight,
   BadgeAlert,
@@ -123,7 +123,7 @@ const toneStyles: Record<Metric["tone"], string> = {
   warning: "bg-warning/20 text-warning",
 };
 
-const FinanceCategoryChart = lazy(() => import("@/components/zarqa/finance-category-chart"));
+const FinanceCategoryChart = lazy(() => import("@/components/luize/finance-category-chart"));
 
 const Financeiro = () => {
   useDocumentTitle("Financeiro");

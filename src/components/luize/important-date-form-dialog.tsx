@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/auth-provider";
 import { toast } from "sonner";
 import { CalendarPlus, Pencil, Trash2 } from "lucide-react";
-import type { Contact } from "@/components/zarqa/contact-form-dialog";
+import type { Contact } from "@/components/luize/contact-form-dialog";
 
 export type ImportantDate = {
   id: string;

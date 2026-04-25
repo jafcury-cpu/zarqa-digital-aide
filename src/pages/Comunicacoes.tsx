@@ -9,7 +9,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { SectionCard } from "@/components/zarqa/section-card";
+import { SectionCard } from "@/components/luize/section-card";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 
 type Channel = "whatsapp" | "email" | "instagram" | "linkedin" | "facebook";

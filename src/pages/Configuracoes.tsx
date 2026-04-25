@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { BellRing, Link2, Save } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { SectionCard } from "@/components/zarqa/section-card";
+import { SectionCard } from "@/components/luize/section-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

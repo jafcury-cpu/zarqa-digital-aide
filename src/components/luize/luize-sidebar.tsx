@@ -43,7 +43,7 @@ const navigation = [
   { title: "Configurações", href: "/configuracoes", icon: Settings },
 ];
 
-export function ZarqaSidebar() {
+export function LuizeSidebar() {
   const location = useLocation();
   const { state } = useSidebar();
   const { user, signOut } = useAuth();

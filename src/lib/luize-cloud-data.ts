@@ -9,7 +9,7 @@ import {
   healthTrend as fallbackHealthTrend,
   upcomingBills as fallbackBills,
   type Priority,
-} from "@/lib/zarqa-mocks";
+} from "@/lib/luize-mocks";
 
 export type DashboardAlert = {
   id: string;

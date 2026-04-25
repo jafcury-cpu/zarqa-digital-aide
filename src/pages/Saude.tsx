@@ -1,11 +1,11 @@
 import { lazy, useEffect, useState } from "react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { DeferredLazySection } from "@/components/zarqa/deferred-lazy-section";
-import { LoadingPanel } from "@/components/zarqa/loading-panel";
-import { SectionCard } from "@/components/zarqa/section-card";
+import { DeferredLazySection } from "@/components/luize/deferred-lazy-section";
+import { LoadingPanel } from "@/components/luize/loading-panel";
+import { SectionCard } from "@/components/luize/section-card";
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
-import { getFallbackHealthData, getHealthData, type HealthData } from "@/lib/zarqa-cloud-data";
+import { getFallbackHealthData, getHealthData, type HealthData } from "@/lib/luize-cloud-data";
 
 const Saude = () => {
   useDocumentTitle("Saúde");
@@ -13,7 +13,7 @@ const Saude = () => {
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [healthData, setHealthData] = useState<HealthData>(getFallbackHealthData());
-  const HealthTrendChart = lazy(() => import("@/components/zarqa/health-trend-chart"));
+  const HealthTrendChart = lazy(() => import("@/components/luize/health-trend-chart"));
 
   const metricCards = [
     { label: "Sono", value: `${healthData.healthSnapshot.sleepHours}h`, detail: `${healthData.healthSnapshot.sleepQuality}% qualidade` },

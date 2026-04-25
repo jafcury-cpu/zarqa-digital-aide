@@ -4,8 +4,8 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { ThemeProvider } from "@/components/theme-provider";
-import { LoadingPanel } from "@/components/zarqa/loading-panel";
-import { ZarqaAppLayout } from "@/components/zarqa/zarqa-app-layout";
+import { LoadingPanel } from "@/components/luize/loading-panel";
+import { LuizeAppLayout } from "@/components/luize/luize-app-layout";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -51,7 +51,7 @@ const App = () => (
                 <Route
                   element={
                     <ProtectedRoute>
-                      <ZarqaAppLayout />
+                      <LuizeAppLayout />
                     </ProtectedRoute>
                   }
                 >

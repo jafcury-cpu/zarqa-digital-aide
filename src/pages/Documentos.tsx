@@ -1,7 +1,7 @@
 import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Download, Search, UploadCloud } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { SectionCard } from "@/components/zarqa/section-card";
+import { SectionCard } from "@/components/luize/section-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
-import { fallbackDocuments, formatDateTime } from "@/lib/zarqa-mocks";
+import { fallbackDocuments, formatDateTime } from "@/lib/luize-mocks";
 
 type StoredDocument = {
   id: string;

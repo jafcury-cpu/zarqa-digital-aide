@@ -1,14 +1,14 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { SendHorizontal } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
-import { SectionCard } from "@/components/zarqa/section-card";
+import { SectionCard } from "@/components/luize/section-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
-import { formatDateTime } from "@/lib/zarqa-mocks";
+import { formatDateTime } from "@/lib/luize-mocks";
 
 type MessageRow = {
   id: string;
@@ -139,7 +139,7 @@ const Chat = () => {
         const { data, error } = await supabase.functions.invoke("chat-webhook", {
           body: {
             message: content,
-            source: "zarqa-chat",
+            source: "luize-chat",
             history,
           },
         });
