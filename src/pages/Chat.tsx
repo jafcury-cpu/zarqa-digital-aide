@@ -321,8 +321,28 @@ const Chat = () => {
             </p>
           </div>
           <div className="rounded-xl border border-border bg-panel-elevated p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <p className="text-kicker">Status da conexão</p>
+              <Badge variant={STATUS_BADGE[status].variant}>{STATUS_BADGE[status].label}</Badge>
+            </div>
+            {statusDetail ? <p className="mb-2 text-foreground">{statusDetail}</p> : null}
+            {latencyMs !== null && status === "online" ? (
+              <p className="mb-2 font-mono text-xs text-muted-foreground">Latência: {latencyMs} ms</p>
+            ) : null}
+            {lastCheckedAt ? (
+              <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                Verificado às {lastCheckedAt.toLocaleTimeString("pt-BR")}
+              </p>
+            ) : null}
+            {status === "not_configured" ? (
+              <Button asChild variant="outline" size="sm" className="mt-3">
+                <Link to="/configuracoes">Configurar webhook</Link>
+              </Button>
+            ) : null}
+          </div>
+          <div className="rounded-xl border border-border bg-panel-elevated p-4">
             <p className="mb-2 text-kicker">Webhook</p>
-            <p>{webhookUrl || "Nenhuma URL configurada no momento."}</p>
+            <p className="break-all">{webhookUrl || "Nenhuma URL configurada no momento."}</p>
           </div>
           <div className="rounded-xl border border-border bg-panel-elevated p-4">
             <p className="mb-2 text-kicker">Payload</p>
