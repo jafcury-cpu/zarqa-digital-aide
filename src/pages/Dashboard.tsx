@@ -97,7 +97,7 @@ const Dashboard = () => {
         <SectionCard
           title="Briefing do Dia"
           description="Síntese executiva com prioridades, riscos e agenda"
-          eyebrow="Daily briefing"
+          eyebrow="Briefing diário"
           className="xl:col-span-5"
           action={<Badge variant="info">Atualização 07:00</Badge>}
         >
@@ -128,7 +128,7 @@ const Dashboard = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="Alertas Ativos" description="Sinais operacionais abertos" eyebrow="Risk radar" className="xl:col-span-3">
+        <SectionCard title="Alertas Ativos" description="Sinais operacionais abertos" eyebrow="Radar de risco" className="xl:col-span-3">
           {/* TODO: conectar com n8n webhook */}
           <div className="space-y-3">
              {dashboardData.activeAlerts.map((alert) => (
@@ -146,7 +146,7 @@ const Dashboard = () => {
         <SectionCard
           title="Contas a Vencer"
           description="Vencimentos em horizonte imediato"
-          eyebrow="Cash pressure"
+          eyebrow="Pressão de caixa"
           className="xl:col-span-6"
         >
           {/* TODO: conectar com n8n webhook */}
@@ -167,7 +167,7 @@ const Dashboard = () => {
         <SectionCard
           title="Score de Saúde"
           description="Leitura consolidada do dia"
-          eyebrow="Health telemetry"
+          eyebrow="Telemetria de saúde"
           className="xl:col-span-3"
           action={<Activity className="size-4 text-accent-blue" />}
         >

@@ -200,7 +200,7 @@ const Contatos = () => {
       </SectionCard>
 
       {/* Contacts list */}
-      <SectionCard title="Agenda de Contatos" description="Organizado por membro da família e assunto" eyebrow="Contacts">
+      <SectionCard title="Agenda de Contatos" description="Organizado por membro da família e assunto" eyebrow="Contatos">
         <div className="mb-4 flex flex-wrap items-center gap-3">
           <Input
             value={search}

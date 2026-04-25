@@ -67,7 +67,7 @@ const Saude = () => {
 
   return (
     <div className="grid gap-4 xl:grid-cols-12">
-      <SectionCard title="Score Diário" description="Leitura consolidada de recuperação e consistência" eyebrow="Health score" className="xl:col-span-4">
+      <SectionCard title="Score Diário" description="Leitura consolidada de recuperação e consistência" eyebrow="Score de saúde" className="xl:col-span-4">
         {/* TODO: conectar com n8n webhook */}
         <div className="rounded-2xl border border-border bg-panel-elevated p-6">
           <p className="font-display text-7xl leading-none text-foreground">{healthData.healthSnapshot.overallScore}</p>
@@ -77,7 +77,7 @@ const Saude = () => {
         </div>
       </SectionCard>
 
-      <SectionCard title="Sinais Vitais e Hábitos" description="Indicadores do dia" eyebrow="Metrics" className="xl:col-span-8">
+      <SectionCard title="Sinais Vitais e Hábitos" description="Indicadores do dia" eyebrow="Métricas" className="xl:col-span-8">
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           {metricCards.map((metric) => (
             <div key={metric.label} className="rounded-2xl border border-border bg-panel-elevated p-4">
@@ -89,7 +89,7 @@ const Saude = () => {
         </div>
       </SectionCard>
 
-      <SectionCard title="Tendência dos últimos 7 dias" description="Score e padrão de sono" eyebrow="Weekly trend" className="xl:col-span-12">
+      <SectionCard title="Tendência dos últimos 7 dias" description="Score e padrão de sono" eyebrow="Tendência semanal" className="xl:col-span-12">
         {/* TODO: conectar com n8n webhook */}
          <DeferredLazySection component={HealthTrendChart} componentProps={{ data: healthData.healthTrend }} minHeightClassName="min-h-[340px]" />
       </SectionCard>

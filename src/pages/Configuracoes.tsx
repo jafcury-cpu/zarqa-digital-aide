@@ -149,7 +149,7 @@ const Configuracoes = () => {
               <BellRing className="size-4 text-primary" />
               Operação
             </div>
-            <p>Modo single-user ativo para {user?.email}.</p>
+            <p>Modo de usuário único ativo para {user?.email}.</p>
           </div>
         </div>
       </SectionCard>

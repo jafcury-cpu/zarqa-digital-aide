@@ -155,7 +155,7 @@ const Documentos = () => {
 
   return (
     <div className="space-y-4">
-      <SectionCard title="Busca Semântica" description="Placeholder inicial para pesquisa de documentos" eyebrow="Document retrieval">
+      <SectionCard title="Busca Semântica" description="Placeholder inicial para pesquisa de documentos" eyebrow="Recuperação de documentos">
         {/* TODO: conectar com n8n webhook */}
         <div className="mb-4 flex flex-wrap gap-2">
           <Badge variant="info">Privado no storage</Badge>
@@ -214,7 +214,7 @@ const Documentos = () => {
         <p className="mt-3 text-sm text-muted-foreground">Arquivos ficam privados e são abertos via link assinado temporário. Limite de 20 MB por arquivo.</p>
       </SectionCard>
 
-      <SectionCard title="Biblioteca de Documentos" description="Lista privada com preview e ações" eyebrow="Repository">
+      <SectionCard title="Biblioteca de Documentos" description="Lista privada com preview e ações" eyebrow="Repositório">
         <div className="grid gap-3">
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (

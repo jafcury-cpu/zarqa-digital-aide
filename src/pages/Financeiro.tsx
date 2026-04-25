@@ -258,7 +258,7 @@ const Financeiro = () => {
     <div className="flex flex-col gap-4">
       {/* Row 1: Summary + Reconciliation */}
       <div className="grid gap-4 xl:grid-cols-12">
-        <SectionCard title="Saldo Total" description="Posição consolidada dos últimos 30 dias" eyebrow="Cash position" className="xl:col-span-4">
+        <SectionCard title="Saldo Total" description="Posição consolidada dos últimos 30 dias" eyebrow="Posição de caixa" className="xl:col-span-4">
           <div className="space-y-4 rounded-2xl border border-border bg-panel-elevated p-5">
             <p className="font-display text-5xl leading-none text-foreground">{formatCurrency(financeData.summary.totalBalance)}</p>
             <div className="grid grid-cols-2 gap-3 text-sm">
@@ -274,7 +274,7 @@ const Financeiro = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="Prontidão da Conciliação" description="Status por instituição bancária" eyebrow="Reconciliation" className="xl:col-span-4">
+        <SectionCard title="Prontidão da Conciliação" description="Status por instituição bancária" eyebrow="Conciliação" className="xl:col-span-4">
           <div className="rounded-2xl border border-border bg-panel-elevated p-5">
             <div className="flex items-start justify-between gap-4">
               <div>
@@ -300,7 +300,7 @@ const Financeiro = () => {
           </div>
         </SectionCard>
 
-        <SectionCard title="Contas nos próximos 7 dias" description="Janela tática de vencimentos" eyebrow="Due soon" className="xl:col-span-4">
+        <SectionCard title="Contas nos próximos 7 dias" description="Janela tática de vencimentos" eyebrow="Próximos vencimentos" className="xl:col-span-4">
           <div className="space-y-3">
             {upcomingSevenDays.map((bill) => (
               <div key={bill.id} className="rounded-xl border border-border bg-panel-elevated p-4">
@@ -333,11 +333,11 @@ const Financeiro = () => {
 
       {/* Row 3: Category chart + Timeline */}
       <div className="grid gap-4 xl:grid-cols-12">
-        <SectionCard title="Gastos por Categoria" description="Últimos 30 dias" eyebrow="Allocation view" className="xl:col-span-8">
+        <SectionCard title="Gastos por Categoria" description="Últimos 30 dias" eyebrow="Alocação" className="xl:col-span-8">
           <DeferredLazySection component={FinanceCategoryChart} componentProps={{ data: financeData.categoryData }} minHeightClassName="min-h-[320px]" />
         </SectionCard>
 
-        <SectionCard title="Próximos vencimentos" description="Agenda operacional de pagamentos" eyebrow="Timeline" className="xl:col-span-4">
+        <SectionCard title="Próximos vencimentos" description="Agenda operacional de pagamentos" eyebrow="Linha do tempo" className="xl:col-span-4">
           <div className="space-y-3">
             {defaultTimeline.map((item) => (
               <div key={`${item.day}-${item.title}`} className="rounded-xl border border-border bg-panel-elevated p-4">
@@ -359,7 +359,7 @@ const Financeiro = () => {
       </div>
 
       {/* Row 4: Transactions table */}
-      <SectionCard title="Transações Recentes" description="Busca e filtro operacional" eyebrow="Ledger">
+      <SectionCard title="Transações Recentes" description="Busca e filtro operacional" eyebrow="Razão">
         <div className="mb-4 grid gap-3 md:grid-cols-[1fr_220px]">
           <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por descrição" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -403,7 +403,7 @@ const Financeiro = () => {
       </SectionCard>
 
       {/* Row 5: Modules grid */}
-      <SectionCard title="Módulos do Sistema Financeiro" description="Organizado para controlar rotina, faturas, boletos e divergências" eyebrow="Capabilities">
+      <SectionCard title="Módulos do Sistema Financeiro" description="Organizado para controlar rotina, faturas, boletos e divergências" eyebrow="Recursos">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {modules.map(({ icon: Icon, title, description }) => (
             <div key={title} className="rounded-2xl border border-border bg-panel-elevated p-5">
@@ -418,7 +418,7 @@ const Financeiro = () => {
       </SectionCard>
 
       {/* Row 6: Tabs — Contas, Cartões, Conciliação */}
-      <SectionCard title="Visão Detalhada" description="Separação por contas, cartões e conciliação" eyebrow="Deep dive">
+      <SectionCard title="Visão Detalhada" description="Separação por contas, cartões e conciliação" eyebrow="Visão detalhada">
         <Tabs defaultValue="contas" className="space-y-4">
           <TabsList className="h-auto flex-wrap rounded-full bg-muted/70 p-1">
             <TabsTrigger className="rounded-full px-5" value="contas">Contas</TabsTrigger>

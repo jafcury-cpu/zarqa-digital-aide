@@ -12,7 +12,7 @@ const ResetPassword = () => {
         <div className="absolute inset-0 bg-hero opacity-80" />
         <div className="grid-tech absolute inset-0 opacity-20" />
         <div className="relative z-10">
-          <p className="text-kicker">Account Recovery</p>
+          <p className="text-kicker">Recuperação de conta</p>
           <h1 className="mt-3 text-5xl font-semibold tracking-[0.16em] text-foreground">Luize</h1>
         </div>
 
