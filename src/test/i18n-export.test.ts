@@ -47,22 +47,33 @@ describe("i18n-export", () => {
     );
   });
 
-  it("buildI18nExport(json) retorna todas as chaves", () => {
+  it("buildI18nExport(json) retorna todas as chaves com área", () => {
     const out = buildI18nExport("json");
-    const parsed = JSON.parse(out.content) as Record<string, string>;
+    const parsed = JSON.parse(out.content) as Array<{
+      key: string;
+      area: string;
+      value: string;
+    }>;
     expect(out.format).toBe("json");
     expect(out.totalKeys).toBe(Object.keys(dictionary).length);
-    expect(Object.keys(parsed).sort()).toEqual(
+    expect(parsed).toHaveLength(Object.keys(dictionary).length);
+    expect(parsed.map((e) => e.key).sort()).toEqual(
       Object.keys(dictionary).sort(),
     );
+    for (const entry of parsed) {
+      const expected = entry.key.includes(".")
+        ? entry.key.split(".")[0]
+        : "outros";
+      expect(entry.area).toBe(expected);
+    }
     expect(out.mime).toBe("application/json");
     expect(out.filename).toMatch(/completo\.json$/);
   });
 
-  it("buildI18nExport(csv) tem header + 1 linha por chave", () => {
+  it("buildI18nExport(csv) tem header com area + 1 linha por chave", () => {
     const out = buildI18nExport("csv");
     const lines = out.content.split("\n");
-    expect(lines[0]).toBe("key,value");
+    expect(lines[0]).toBe("key,area,value");
     expect(lines.length).toBe(Object.keys(dictionary).length + 1);
     expect(out.mime).toBe("text/csv");
   });
@@ -71,16 +82,18 @@ describe("i18n-export", () => {
     const tricky: [string, string][] = [
       ["brand.name", 'Luize, "a Luize"\nlinha'],
     ];
-    // Apenas valida geração — não passa pelo validateEntries de chaves do dict
-    // simulando manualmente:
     const out = buildI18nExport("csv", tricky as never);
-    const second = out.content.split("\n").slice(1).join("\n");
-    expect(second).toContain('"Luize, ""a Luize""');
+    const lines = out.content.split("\n");
+    expect(lines[0]).toBe("key,area,value");
+    // segunda coluna é a área calculada ("brand")
+    const body = lines.slice(1).join("\n");
+    expect(body).toMatch(/^brand\.name,brand,/);
+    expect(body).toContain('"Luize, ""a Luize""');
   });
 
   it("export filtrado vazio é permitido (não exige completude)", () => {
     const out = buildI18nExport("json", []);
-    expect(out.content).toBe("{}");
+    expect(out.content).toBe("[]");
     expect(out.totalKeys).toBe(0);
   });
 });
