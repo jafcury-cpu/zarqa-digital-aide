@@ -28,7 +28,7 @@ export function LuizeAppLayout() {
             <div className="flex items-center gap-3">
               <SidebarTrigger className="h-10 w-10 rounded-xl border border-border bg-panel text-foreground hover:bg-panel-elevated md:hidden" />
               <div>
-                <p className="text-kicker">Painel de controle da Luize</p>
+                <p className="text-kicker">{t("layout.controlSurface")}</p>
                 <h1 className="text-lg font-semibold tracking-tight text-foreground">{current.title}</h1>
               </div>
             </div>
