@@ -198,6 +198,54 @@ export default function I18nPreview() {
           </div>
         )}
       </div>
+
+      <Sheet
+        open={selectedKey !== null}
+        onOpenChange={(open) => !open && setSelectedKey(null)}
+      >
+        <SheetContent side="right" className="w-full sm:max-w-xl">
+          <SheetHeader className="space-y-2">
+            <SheetTitle className="break-all font-mono text-sm text-accent-blue">
+              {selectedKey}
+            </SheetTitle>
+            <SheetDescription className="text-foreground">
+              {selectedValue ?? "(sem valor)"}
+            </SheetDescription>
+            <div className="pt-2">
+              <Badge variant="outline">
+                {selectedOccurrences.length} ocorrência
+                {selectedOccurrences.length === 1 ? "" : "s"}
+              </Badge>
+            </div>
+          </SheetHeader>
+
+          <div className="mt-6 max-h-[calc(100vh-12rem)] space-y-3 overflow-y-auto pr-2">
+            {selectedOccurrences.length === 0 ? (
+              <p className="rounded-md border border-dashed border-destructive/40 p-4 text-sm text-muted-foreground">
+                Nenhum uso encontrado em <code>src/</code>. A chave pode estar
+                órfã — considere remover do dicionário.
+              </p>
+            ) : (
+              selectedOccurrences.map((occ, idx) => (
+                <div
+                  key={`${occ.file}-${occ.line}-${idx}`}
+                  className="surface-panel space-y-1 p-3"
+                >
+                  <div className="flex items-baseline justify-between gap-2">
+                    <code className="font-mono text-xs text-accent-blue break-all">
+                      {occ.file}
+                    </code>
+                    <Badge variant="outline">linha {occ.line}</Badge>
+                  </div>
+                  <pre className="overflow-x-auto rounded bg-muted/40 p-2 font-mono text-[11px] leading-relaxed text-foreground">
+                    {occ.snippet}
+                  </pre>
+                </div>
+              ))
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
