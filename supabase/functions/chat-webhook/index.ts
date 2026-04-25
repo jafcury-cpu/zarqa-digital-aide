@@ -11,7 +11,8 @@ const REQUEST_TIMEOUT_MS = 8000;
 const MAX_HISTORY_ITEMS = 30;
 const MAX_MESSAGE_LENGTH = 4000;
 
-const bodySchema = z.object({
+const messageSchema = z.object({
+  mode: z.literal("message").optional().default("message"),
   message: z.string().trim().min(1).max(MAX_MESSAGE_LENGTH),
   source: z.string().trim().min(1).max(100).optional().default("luize-chat"),
   history: z
@@ -25,6 +26,13 @@ const bodySchema = z.object({
     .optional()
     .default([]),
 });
+
+const pingSchema = z.object({
+  mode: z.literal("ping"),
+});
+
+const bodySchema = z.union([pingSchema, messageSchema]);
+const PING_TIMEOUT_MS = 5000;
 
 const ipv4Pattern = /^(?:\d{1,3}\.){3}\d{1,3}$/;
 
