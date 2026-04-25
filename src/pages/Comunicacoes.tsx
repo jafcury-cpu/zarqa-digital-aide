@@ -123,8 +123,9 @@ const Comunicacoes = () => {
       // TODO: conectar com n8n webhook para envio real da resposta
       toast({ title: "Resposta aprovada", description: "Aguardando envio pelo n8n." });
       fetchData();
-    } catch (e: any) {
-      toast({ variant: "destructive", title: "Erro", description: e.message });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : String(e);
+      toast({ variant: "destructive", title: "Erro", description: message });
     } finally {
       setSendingId(null);
     }
