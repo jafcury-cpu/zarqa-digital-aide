@@ -285,7 +285,15 @@ export default function I18nPreview() {
             <Download className="mr-2 size-4" />
             CSV (visível)
           </Button>
-
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => handleExportXlsx(filtered)}
+          >
+            <Download className="mr-2 size-4" />
+            XLSX (visível)
+          </Button>
           {area !== "__all__" && (
             <>
               <Button
