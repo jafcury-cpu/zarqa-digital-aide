@@ -96,4 +96,57 @@ describe("i18n-export", () => {
     expect(out.content).toBe("[]");
     expect(out.totalKeys).toBe(0);
   });
+  it("CSV: ordem de colunas é sempre key,area,value", () => {
+    const out = buildI18nExport("csv");
+    expect(out.content.split("\n")[0]).toBe("key,area,value");
+  });
+
+  it("CSV: chave sem ponto recebe area='outros'", () => {
+    const out = buildI18nExport("csv", [["semponto", "valor X"]] as never);
+    const lines = out.content.split("\n");
+    expect(lines[0]).toBe("key,area,value");
+    expect(lines[1]).toBe("semponto,outros,valor X");
+  });
+
+  it("CSV: múltiplos prefixos usam apenas o primeiro segmento como area", () => {
+    const fakes: [string, string][] = [
+      ["a.b.c.d", "v1"],
+      ["x.y.z", "v2"],
+      ["foo.bar", "v3"],
+    ];
+    const out = buildI18nExport("csv", fakes as never);
+    const lines = out.content.split("\n");
+    expect(lines[0]).toBe("key,area,value");
+    expect(lines[1]).toBe("a.b.c.d,a,v1");
+    expect(lines[2]).toBe("x.y.z,x,v2");
+    expect(lines[3]).toBe("foo.bar,foo,v3");
+  });
+
+  it("CSV completo: area de cada linha bate com a lógica do preview", () => {
+    const out = buildI18nExport("csv");
+    const lines = out.content.split("\n").slice(1);
+    expect(lines.length).toBe(Object.keys(dictionary).length);
+    for (const line of lines) {
+      // Pega os 2 primeiros campos respeitando aspas simples (sem vírgula no key/area)
+      const [key, area] = line.split(",", 2);
+      const expected = key.includes(".") ? key.split(".")[0] : "outros";
+      expect(area, `linha: ${line}`).toBe(expected);
+    }
+  });
+
+  it("JSON completo: cada item tem { key, area, value } com area consistente", () => {
+    const out = buildI18nExport("json");
+    const parsed = JSON.parse(out.content) as Array<{
+      key: string;
+      area: string;
+      value: string;
+    }>;
+    for (const item of parsed) {
+      const expected = item.key.includes(".")
+        ? item.key.split(".")[0]
+        : "outros";
+      expect(item.area).toBe(expected);
+      expect(Object.keys(item)).toEqual(["key", "area", "value"]);
+    }
+  });
 });
