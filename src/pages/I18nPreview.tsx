@@ -82,6 +82,44 @@ export default function I18nPreview() {
           </p>
         </header>
 
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const payload = JSON.stringify(
+                Object.fromEntries(filtered),
+                null,
+                2,
+              );
+              downloadFile("luize-i18n.json", payload, "application/json");
+            }}
+          >
+            <Download className="mr-2 size-4" />
+            Exportar JSON
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const header = "key,value";
+              const rows = filtered.map(
+                ([key, value]) => `${escapeCsvField(key)},${escapeCsvField(value)}`,
+              );
+              const csv = [header, ...rows].join("\n");
+              downloadFile("luize-i18n.csv", csv, "text/csv");
+            }}
+          >
+            <Download className="mr-2 size-4" />
+            Exportar CSV
+          </Button>
+          <span className="self-center text-xs text-muted-foreground">
+            Exporta {filtered.length} chave(s) {query ? "(filtradas)" : ""}
+          </span>
+        </div>
+
         <div className="relative">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
