@@ -28,7 +28,7 @@ export function ZarqaAppLayout() {
             <div className="flex items-center gap-3">
               <SidebarTrigger className="h-10 w-10 rounded-xl border border-border bg-panel text-foreground hover:bg-panel-elevated md:hidden" />
               <div>
-                <p className="text-kicker">ZARQA Control Surface</p>
+                <p className="text-kicker">Luize Control Surface</p>
                 <h1 className="text-lg font-semibold tracking-tight text-foreground">{current.title}</h1>
               </div>
             </div>

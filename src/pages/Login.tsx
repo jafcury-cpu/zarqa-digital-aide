@@ -57,7 +57,7 @@ const Login = () => {
         <div className="relative z-10 flex items-center justify-between">
           <div>
             <p className="text-kicker">Executive Terminal</p>
-            <h1 className="mt-3 text-5xl font-semibold tracking-[0.16em] text-foreground">ZARQA ٢٨</h1>
+            <h1 className="mt-3 text-5xl font-semibold tracking-[0.16em] text-foreground">Luize</h1>
           </div>
           <ShieldCheck className="size-10 animate-pulse-soft text-primary" />
         </div>
@@ -84,7 +84,7 @@ const Login = () => {
         <Card className="surface-elevated w-full max-w-md border-border/90 bg-panel-elevated">
           <CardHeader className="space-y-3">
             <p className="text-kicker">Acesso Privado</p>
-            <CardTitle className="text-3xl tracking-tight">Entrar na ZARQA</CardTitle>
+            <CardTitle className="text-3xl tracking-tight">Entrar na Luize</CardTitle>
             <CardDescription>Login pessoal único com autenticação segura por Google.</CardDescription>
           </CardHeader>
           <CardContent>

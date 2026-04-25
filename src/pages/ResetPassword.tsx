@@ -11,7 +11,7 @@ const ResetPassword = () => {
         <div className="grid-tech absolute inset-0 opacity-20" />
         <div className="relative z-10">
           <p className="text-kicker">Account Recovery</p>
-          <h1 className="mt-3 text-5xl font-semibold tracking-[0.16em] text-foreground">ZARQA ٢٨</h1>
+          <h1 className="mt-3 text-5xl font-semibold tracking-[0.16em] text-foreground">Luize</h1>
         </div>
 
         <div className="relative z-10 max-w-xl space-y-6">

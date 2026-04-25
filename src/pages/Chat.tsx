@@ -174,7 +174,7 @@ const Chat = () => {
   return (
     <div className="grid gap-4 xl:grid-cols-[1.6fr_0.7fr]">
       <SectionCard
-        title="Canal direto com a ZARQA"
+        title="Canal direto com a Luize"
         description="Interface de chat persistida no banco e pronta para webhook externo"
         eyebrow="Messaging"
         className="min-h-[72vh]"
