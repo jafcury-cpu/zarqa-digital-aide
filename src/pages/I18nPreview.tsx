@@ -56,6 +56,15 @@ function groupByArea(entries: [string, string][]): Group[] {
 export default function I18nPreview() {
   useDocumentTitle("Dicionário i18n");
   const [query, setQuery] = useState("");
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
+
+  const selectedOccurrences = useMemo(
+    () => (selectedKey ? getUsage(selectedKey) : []),
+    [selectedKey],
+  );
+  const selectedValue = selectedKey
+    ? (dictionary as Record<string, string>)[selectedKey]
+    : undefined;
 
   const allEntries = useMemo(
     () => Object.entries(dictionary) as [string, string][],
