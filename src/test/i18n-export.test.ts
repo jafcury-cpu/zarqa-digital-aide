@@ -570,4 +570,105 @@ describe("i18n-export", () => {
       expect(row[3]).toBe(tricky[i][1]);
     }
   });
+
+  it("round-trip CSV em UTF-8: acentos, ٢٨, “aspas” e vírgulas batem byte a byte", () => {
+    function parseCsv(text: string): string[][] {
+      const rows: string[][] = [];
+      let cur: string[] = [];
+      let field = "";
+      let inQuotes = false;
+      for (let i = 0; i < text.length; i++) {
+        const ch = text[i];
+        if (inQuotes) {
+          if (ch === '"' && text[i + 1] === '"') {
+            field += '"';
+            i++;
+          } else if (ch === '"') {
+            inQuotes = false;
+          } else {
+            field += ch;
+          }
+        } else if (ch === '"') {
+          inQuotes = true;
+        } else if (ch === ",") {
+          cur.push(field);
+          field = "";
+        } else if (ch === "\n") {
+          cur.push(field);
+          rows.push(cur);
+          cur = [];
+          field = "";
+        } else if (ch === "\r") {
+          // ignora CR
+        } else {
+          field += ch;
+        }
+      }
+      if (field.length > 0 || cur.length > 0) {
+        cur.push(field);
+        rows.push(cur);
+      }
+      return rows;
+    }
+
+    const tricky: [string, string][] = [
+      // Acentos pt-BR + cedilha + tipografia
+      ["brand.name", "Ação, “Coração” e açaí"],
+      // Dígitos árabe-índicos (٢٨ = 28) + emoji + ASCII
+      ["common.save", "salvar ٢٨ vezes 🚀, agora"],
+      // Caracteres BMP fora do ASCII + aspas tipográficas + vírgula + \n
+      [
+        "dashboard.eyebrow.briefing",
+        "résumé — “diário”, ٢٨/٠٤\nlinha µ × ©",
+      ],
+    ];
+
+    const out = buildI18nExport("csv", tricky as never);
+    expect(out.mime).toBe("text/csv");
+
+    // 1) Bytes UTF-8 sem perda: encoder→decoder produz string idêntica
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder("utf-8", { fatal: true });
+    const bytes = encoder.encode(out.content);
+    const roundTripStr = decoder.decode(bytes);
+    expect(roundTripStr).toBe(out.content);
+    // E re-encodar deve gerar exatamente os mesmos bytes
+    const reBytes = encoder.encode(roundTripStr);
+    expect(reBytes.length).toBe(bytes.length);
+    for (let i = 0; i < bytes.length; i++) {
+      expect(reBytes[i]).toBe(bytes[i]);
+    }
+
+    // 2) Reimportar (parse) preserva exatamente cada value
+    const rows = parseCsv(roundTripStr);
+    expect(rows[0]).toEqual(["key", "area", "value"]);
+    const body = rows.slice(1);
+    expect(body).toHaveLength(tricky.length);
+    for (let i = 0; i < tricky.length; i++) {
+      const [origKey, origValue] = tricky[i];
+      const [reKey, reArea, reValue] = body[i];
+      expect(reKey).toBe(origKey);
+      expect(reArea).toBe(origKey.split(".")[0]);
+      expect(reValue).toBe(origValue);
+      // Comparação byte-a-byte (UTF-8) do value
+      const a = encoder.encode(reValue);
+      const b = encoder.encode(origValue);
+      expect(a.length).toBe(b.length);
+      for (let j = 0; j < a.length; j++) {
+        expect(a[j]).toBe(b[j]);
+      }
+    }
+
+    // 3) Re-exportar a partir do reimportado gera bytes idênticos ao original
+    const reTuples: [string, string][] = body.map(
+      ([k, , v]) => [k, v] as [string, string],
+    );
+    const reExported = buildI18nExport("csv", reTuples as never);
+    expect(reExported.content).toBe(out.content);
+    const reExpBytes = encoder.encode(reExported.content);
+    expect(reExpBytes.length).toBe(bytes.length);
+    for (let i = 0; i < bytes.length; i++) {
+      expect(reExpBytes[i]).toBe(bytes[i]);
+    }
+  });
 });
