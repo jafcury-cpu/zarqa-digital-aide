@@ -418,9 +418,18 @@ const Chat = () => {
     void load();
   }, [toast, user, checkWebhook]);
 
-  // Realtime: keep history in sync across tabs/devices for the current user, with auto-reconnect + toasts
+  // Realtime: keep history in sync across tabs/devices for the current user, with auto-reconnect + toasts.
+  // Keyed on the user *id* (not the user object) so token refreshes don't tear down the channel,
+  // and so a user switch triggers a clean teardown + fresh subscription.
+  const userId = user?.id ?? null;
   useEffect(() => {
-    if (!user) return;
+    if (!userId) return;
+
+    // On user change: invalidate cross-run dedupe so the new session can show its own toasts cleanly
+    if (lastToastedRef.current.userId !== userId) {
+      lastToastedRef.current = { status: null, reason: "", at: 0, userId };
+    }
+
     if (realtimePaused) {
       // Pause: skip subscribing entirely; cleanup runs on next pause toggle / unmount
       setRealtimeStatus("paused");
@@ -434,20 +443,23 @@ const Chat = () => {
     let reconnectTimer: number | null = null;
     let attempt = 0;
     let cancelled = false;
-    let lastNotifiedStatus: RealtimeStatus | null = null;
 
     const formatNow = () => new Date().toLocaleTimeString("pt-BR");
 
     const notifyTransition = (next: RealtimeStatus, reason: string) => {
-      if (lastNotifiedStatus === next) return;
-      const previous = lastNotifiedStatus;
-      lastNotifiedStatus = next;
-
-      // Skip the very first "connected" toast on initial mount to avoid noise
-      if (next === "connected" && previous === null) return;
-
       // Honor user preference to silence realtime connection toasts
       if (realtimeToastsMutedRef.current) return;
+
+      const last = lastToastedRef.current;
+      // Dedupe: same status+reason within 2s (covers StrictMode double-mount and rapid retries)
+      if (last.status === next && last.reason === reason && Date.now() - last.at < 2000) return;
+      // Skip the very first connected toast for this user session (initial mount noise)
+      if (next === "connected" && last.status === null) {
+        lastToastedRef.current = { status: next, reason, at: Date.now(), userId };
+        return;
+      }
+
+      lastToastedRef.current = { status: next, reason, at: Date.now(), userId };
 
       if (next === "connected") {
         sonnerToast.success("Realtime reconectado", {
@@ -465,14 +477,29 @@ const Chat = () => {
     };
 
     const updateStatus = (next: RealtimeStatus, reason: string) => {
+      if (cancelled) return;
       setRealtimeStatus(next);
       setRealtimeLastChangeAt(new Date());
       setRealtimeReason(reason);
-      // Persist transition to the recent log (skip the initial "connecting" noise)
       if (next !== "connecting") {
         appendRealtimeLog(next, reason);
       }
       notifyTransition(next, reason);
+    };
+
+    const clearTimer = () => {
+      if (reconnectTimer !== null) {
+        window.clearTimeout(reconnectTimer);
+        reconnectTimer = null;
+      }
+    };
+
+    const teardownChannel = () => {
+      if (channel) {
+        const c = channel;
+        channel = null;
+        void supabase.removeChannel(c).catch(() => undefined);
+      }
     };
 
     const scheduleReconnect = (reason: string) => {
@@ -482,22 +509,27 @@ const Chat = () => {
       setReconnectAttempts(attempt);
       setNextRetryAt(Date.now() + delay);
       setRealtimeReason(`${reason} — nova tentativa em ${Math.round(delay / 1000)}s`);
+      clearTimer();
       reconnectTimer = window.setTimeout(() => {
+        reconnectTimer = null;
+        if (cancelled) return;
         setNextRetryAt(null);
-        if (!cancelled) connect();
+        connect();
       }, delay);
     };
 
     const connect = () => {
       if (cancelled) return;
+      teardownChannel();
       setRealtimeStatus((prev) => (prev === "connected" ? prev : "connecting"));
 
       channel = supabase
-        .channel(`messages:${user.id}:${attempt}`)
+        .channel(`messages:${userId}:${attempt}:${Date.now()}`)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
+          { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
           (payload) => {
+            if (cancelled) return;
             const row = payload.new as { id: string; role: string; content: string; created_at: string };
             if (!isValidMessageRole(row.role)) return;
             const role: MessageRow["role"] = row.role;
@@ -512,8 +544,9 @@ const Chat = () => {
         )
         .on(
           "postgres_changes",
-          { event: "DELETE", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
+          { event: "DELETE", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
           (payload) => {
+            if (cancelled) return;
             const oldRow = payload.old as { id?: string };
             if (oldRow?.id) {
               setMessages((current) => current.filter((m) => m.id !== oldRow.id));
@@ -523,6 +556,7 @@ const Chat = () => {
           },
         )
         .subscribe((subStatus) => {
+          if (cancelled) return;
           if (subStatus === "SUBSCRIBED") {
             attempt = 0;
             setReconnectAttempts(0);
@@ -530,13 +564,11 @@ const Chat = () => {
             updateStatus("connected", "Canal de mensagens ativo");
           } else if (subStatus === "CHANNEL_ERROR") {
             updateStatus("error", "Erro de canal no Supabase Realtime");
-            void supabase.removeChannel(channel!).catch(() => undefined);
-            channel = null;
+            teardownChannel();
             scheduleReconnect("Erro de canal");
           } else if (subStatus === "TIMED_OUT") {
             updateStatus("error", "Tempo limite ao conectar ao Realtime");
-            void supabase.removeChannel(channel!).catch(() => undefined);
-            channel = null;
+            teardownChannel();
             scheduleReconnect("Timeout de conexão");
           } else if (subStatus === "CLOSED") {
             updateStatus("disconnected", "Conexão encerrada pelo servidor");
@@ -548,22 +580,18 @@ const Chat = () => {
     connect();
 
     const handleOnline = () => {
+      if (cancelled) return;
       if (realtimeStatusRef.current !== "connected") {
         attempt = 0;
         setReconnectAttempts(0);
         setNextRetryAt(null);
-        if (reconnectTimer) {
-          window.clearTimeout(reconnectTimer);
-          reconnectTimer = null;
-        }
-        if (channel) {
-          void supabase.removeChannel(channel).catch(() => undefined);
-          channel = null;
-        }
+        clearTimer();
+        teardownChannel();
         connect();
       }
     };
     const handleOffline = () => {
+      if (cancelled) return;
       updateStatus("disconnected", "Rede do dispositivo offline");
     };
     window.addEventListener("online", handleOnline);
@@ -571,13 +599,30 @@ const Chat = () => {
 
     return () => {
       cancelled = true;
-      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      clearTimer();
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
-      if (channel) void supabase.removeChannel(channel);
+      teardownChannel();
+      // Reset transient UI state so a stale countdown / attempts badge doesn't bleed into the next session
+      setReconnectAttempts(0);
+      setNextRetryAt(null);
+      setRetryCountdown(null);
       setRealtimeStatus("disconnected");
     };
-  }, [user, realtimePaused, reconnectNonce]);
+  }, [userId, realtimePaused, reconnectNonce]);
+
+  // When the authenticated user changes (login/logout/switch), drop in-memory chat state
+  // immediately so we don't briefly render the previous user's messages.
+  useEffect(() => {
+    setMessages([]);
+    setRecentSyncs([]);
+    setLastSyncAt(null);
+    setHasMore(false);
+    setReconnectAttempts(0);
+    setNextRetryAt(null);
+    setRetryCountdown(null);
+  }, [userId]);
+
 
   const handleManualReconnect = useCallback(() => {
     if (realtimePaused) return;
