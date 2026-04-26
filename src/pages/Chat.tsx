@@ -126,6 +126,8 @@ function RealtimeIndicator({
   paused,
   reconnectAttempts,
   retryCountdown,
+  log,
+  onClearLog,
 }: {
   status: RealtimeStatus;
   insertCount: number;
