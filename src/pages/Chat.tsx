@@ -1,7 +1,8 @@
 import { t } from "@/lib/i18n";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronUp, Download, Pause, Play, RefreshCw, SendHorizontal, Trash2, Radio } from "lucide-react";
+import { ChevronUp, Download, History, Pause, Play, RefreshCw, SendHorizontal, Trash2, Radio } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useAuth } from "@/components/auth/auth-provider";
 import { SectionCard } from "@/components/luize/section-card";
 import { Badge } from "@/components/ui/badge";
@@ -23,17 +24,6 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
 import { getRealtimeToastsMuted, REALTIME_TOAST_PREF_KEY } from "@/lib/chat-preferences";
-import {
-  appendRealtimeLog,
-  clearRealtimeLog,
-  getRealtimeLog,
-  REALTIME_LOG_EVENT,
-  REALTIME_LOG_KEY,
-  REALTIME_LOG_MAX,
-  type RealtimeLogEntry,
-} from "@/lib/realtime-log";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { History } from "lucide-react";
 import { formatDateTime } from "@/lib/luize-mocks";
 
 const PAGE_SIZE = 200;
@@ -114,6 +104,28 @@ const REALTIME_BADGE: Record<RealtimeStatus, { variant: "success" | "warning" | 
   paused: { variant: "secondary", label: "Realtime pausado", dot: "bg-muted-foreground" },
 };
 
+type RealtimeEvent = {
+  at: number;
+  status: RealtimeStatus;
+  reason: string;
+};
+
+const EVENT_DOT: Record<RealtimeStatus, string> = {
+  connecting: "bg-muted-foreground",
+  connected: "bg-emerald-500",
+  disconnected: "bg-amber-500",
+  error: "bg-destructive",
+  paused: "bg-muted-foreground",
+};
+
+const EVENT_LABEL: Record<RealtimeStatus, string> = {
+  connecting: "Conectando",
+  connected: "Conectado",
+  disconnected: "Desconectado",
+  error: "Erro",
+  paused: "Pausado",
+};
+
 function RealtimeIndicator({
   status,
   insertCount,
@@ -124,9 +136,7 @@ function RealtimeIndicator({
   onReconnect,
   reconnecting,
   paused,
-  reconnectAttempts,
-  retryCountdown,
-  log,
+  eventLog,
   onClearLog,
 }: {
   status: RealtimeStatus;
@@ -138,16 +148,13 @@ function RealtimeIndicator({
   onReconnect: () => void;
   reconnecting: boolean;
   paused: boolean;
-  reconnectAttempts: number;
-  retryCountdown: number | null;
-  log: RealtimeLogEntry[];
+  eventLog: RealtimeEvent[];
   onClearLog: () => void;
 }) {
   const meta = REALTIME_BADGE[status];
   const total = insertCount + deleteCount;
   const lastUpdate = lastSyncAt ?? lastChangeAt;
   const canReconnect = !paused && (status === "disconnected" || status === "error" || status === "connecting");
-  const showRetryInfo = !paused && (status === "disconnected" || status === "error" || status === "connecting") && reconnectAttempts > 0;
   return (
     <div className="flex flex-col gap-1 border-b border-border bg-panel/60 px-4 py-2 text-xs">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -169,14 +176,76 @@ function RealtimeIndicator({
               {reconnecting ? "Reconectando..." : "Reconectar agora"}
             </Button>
           ) : null}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-7 gap-1.5 px-2 text-[11px]"
+                aria-label="Ver histórico de eventos do realtime"
+              >
+                <History className="size-3" />
+                Histórico
+                {eventLog.length > 0 ? (
+                  <Badge variant="outline" className="h-4 px-1 font-mono text-[10px]">
+                    {eventLog.length}
+                  </Badge>
+                ) : null}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-80 p-0">
+              <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                  Últimos eventos · realtime
+                </p>
+                {eventLog.length > 0 ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={onClearLog}
+                    className="h-6 px-2 text-[10px]"
+                    aria-label="Limpar histórico de eventos"
+                  >
+                    Limpar
+                  </Button>
+                ) : null}
+              </div>
+              {eventLog.length === 0 ? (
+                <p className="px-3 py-4 text-[11px] text-muted-foreground">
+                  Nenhum evento registrado ainda nesta sessão.
+                </p>
+              ) : (
+                <ul className="max-h-72 overflow-y-auto py-1">
+                  {[...eventLog].reverse().map((event, idx) => (
+                    <li
+                      key={`${event.at}-${idx}`}
+                      className="flex items-start gap-2 border-b border-border/40 px-3 py-2 last:border-b-0"
+                    >
+                      <span
+                        className={`mt-1 inline-block size-2 shrink-0 rounded-full ${EVENT_DOT[event.status]}`}
+                        aria-hidden="true"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-mono text-[11px] uppercase tracking-wide text-foreground">
+                            {EVENT_LABEL[event.status]}
+                          </span>
+                          <time className="font-mono text-[10px] text-muted-foreground">
+                            {new Date(event.at).toLocaleTimeString("pt-BR")}
+                          </time>
+                        </div>
+                        <p className="mt-0.5 break-words text-[11px] text-muted-foreground">{event.reason}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </PopoverContent>
+          </Popover>
         </div>
         <div className="flex items-center gap-2">
-          {showRetryInfo ? (
-            <Badge variant="warning" className="font-mono" title="Tentativas automáticas de reconexão desde a última conexão saudável">
-              tentativa {reconnectAttempts}
-              {retryCountdown !== null ? ` · próx. ${retryCountdown}s` : ""}
-            </Badge>
-          ) : null}
           <Badge variant={total > 0 ? "secondary" : "outline"} className="font-mono">
             {total} sync{total === 1 ? "" : "s"} / 60s
           </Badge>
@@ -190,79 +259,6 @@ function RealtimeIndicator({
               últ. {lastUpdate.toLocaleTimeString("pt-BR")}
             </span>
           ) : null}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 gap-1.5 px-2 text-[11px]"
-                aria-label={`Ver últimos ${REALTIME_LOG_MAX} eventos do realtime`}
-                title={`Últimos ${REALTIME_LOG_MAX} eventos de conexão`}
-              >
-                <History className="size-3" />
-                histórico
-                {log.length > 0 ? (
-                  <span className="font-mono text-[10px] text-muted-foreground">({log.length})</span>
-                ) : null}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="end" className="w-80 p-0">
-              <div className="flex items-center justify-between border-b border-border px-3 py-2">
-                <p className="text-xs font-medium text-foreground">
-                  Últimos eventos do realtime
-                </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={onClearLog}
-                  disabled={log.length === 0}
-                  className="h-6 px-2 text-[11px] text-muted-foreground"
-                >
-                  Limpar
-                </Button>
-              </div>
-              {log.length === 0 ? (
-                <p className="px-3 py-4 text-center text-xs text-muted-foreground">
-                  Nenhum evento registrado ainda.
-                </p>
-              ) : (
-                <ul className="max-h-72 divide-y divide-border overflow-y-auto">
-                  {log.map((entry) => {
-                    const meta = REALTIME_BADGE[entry.kind === "manual" ? "connecting" : entry.kind];
-                    return (
-                      <li key={`${entry.at}-${entry.kind}`} className="flex items-start gap-2 px-3 py-2">
-                        <span
-                          className={`mt-1.5 inline-block size-2 shrink-0 rounded-full ${meta.dot}`}
-                          aria-hidden="true"
-                        />
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-foreground">
-                              {entry.kind === "manual" ? "manual" : meta.label}
-                            </span>
-                            <span className="font-mono text-[10px] text-muted-foreground">
-                              {new Date(entry.at).toLocaleString("pt-BR", {
-                                day: "2-digit",
-                                month: "2-digit",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                                second: "2-digit",
-                              })}
-                            </span>
-                          </div>
-                          <p className="mt-0.5 break-words text-xs text-muted-foreground">
-                            {entry.reason}
-                          </p>
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </PopoverContent>
-          </Popover>
         </div>
       </div>
       {reason && status !== "connected" ? (
@@ -295,14 +291,20 @@ const Chat = () => {
   const [realtimeLastChangeAt, setRealtimeLastChangeAt] = useState<Date | null>(null);
   const [recentSyncs, setRecentSyncs] = useState<Array<{ kind: "insert" | "delete"; at: number }>>([]);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
-  const [reconnectAttempts, setReconnectAttempts] = useState(0);
-  const [nextRetryAt, setNextRetryAt] = useState<number | null>(null);
-  const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
-  const [realtimeLog, setRealtimeLog] = useState<RealtimeLogEntry[]>(() => getRealtimeLog());
   const [reconnectNonce, setReconnectNonce] = useState(0);
   const [reconnecting, setReconnecting] = useState(false);
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [resyncing, setResyncing] = useState(false);
+  const [eventLog, setEventLog] = useState<RealtimeEvent[]>([]);
+  const handleClearEventLog = useCallback(() => setEventLog([]), []);
+  const appendEvent = useCallback((status: RealtimeStatus, reason: string) => {
+    setEventLog((current) => {
+      const last = current[current.length - 1];
+      if (last && last.status === status && last.reason === reason) return current;
+      const next = [...current, { at: Date.now(), status, reason }];
+      return next.length > 10 ? next.slice(next.length - 10) : next;
+    });
+  }, []);
   const endRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const previousScrollHeightRef = useRef<number>(0);
@@ -310,14 +312,6 @@ const Chat = () => {
   useEffect(() => {
     realtimeStatusRef.current = realtimeStatus;
   }, [realtimeStatus]);
-
-  // Cross-effect-run dedupe so user switch / StrictMode double-mount won't fire duplicate toasts
-  const lastToastedRef = useRef<{ status: RealtimeStatus | null; reason: string; at: number; userId: string | null }>({
-    status: null,
-    reason: "",
-    at: 0,
-    userId: null,
-  });
 
   // Live preference: silence realtime connection toasts (per-device, stored in localStorage)
   const realtimeToastsMutedRef = useRef<boolean>(getRealtimeToastsMuted());
@@ -333,20 +327,6 @@ const Chat = () => {
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("luize:chat-prefs-changed", sync);
-    };
-  }, []);
-
-  // Subscribe to realtime-log changes (cross-tab via `storage`, same-tab via custom event)
-  useEffect(() => {
-    const refresh = () => setRealtimeLog(getRealtimeLog());
-    const onStorage = (event: StorageEvent) => {
-      if (event.key === REALTIME_LOG_KEY) refresh();
-    };
-    window.addEventListener("storage", onStorage);
-    window.addEventListener(REALTIME_LOG_EVENT, refresh);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener(REALTIME_LOG_EVENT, refresh);
     };
   }, []);
 
@@ -418,24 +398,14 @@ const Chat = () => {
     void load();
   }, [toast, user, checkWebhook]);
 
-  // Realtime: keep history in sync across tabs/devices for the current user, with auto-reconnect + toasts.
-  // Keyed on the user *id* (not the user object) so token refreshes don't tear down the channel,
-  // and so a user switch triggers a clean teardown + fresh subscription.
-  const userId = user?.id ?? null;
+  // Realtime: keep history in sync across tabs/devices for the current user, with auto-reconnect + toasts
   useEffect(() => {
-    if (!userId) return;
-
-    // On user change: invalidate cross-run dedupe so the new session can show its own toasts cleanly
-    if (lastToastedRef.current.userId !== userId) {
-      lastToastedRef.current = { status: null, reason: "", at: 0, userId };
-    }
-
+    if (!user) return;
     if (realtimePaused) {
       // Pause: skip subscribing entirely; cleanup runs on next pause toggle / unmount
       setRealtimeStatus("paused");
       setRealtimeReason("Sincronização pausada manualmente");
       setRealtimeLastChangeAt(new Date());
-      appendRealtimeLog("paused", "Sincronização pausada manualmente");
       return;
     }
 
@@ -443,23 +413,20 @@ const Chat = () => {
     let reconnectTimer: number | null = null;
     let attempt = 0;
     let cancelled = false;
+    let lastNotifiedStatus: RealtimeStatus | null = null;
 
     const formatNow = () => new Date().toLocaleTimeString("pt-BR");
 
     const notifyTransition = (next: RealtimeStatus, reason: string) => {
+      if (lastNotifiedStatus === next) return;
+      const previous = lastNotifiedStatus;
+      lastNotifiedStatus = next;
+
+      // Skip the very first "connected" toast on initial mount to avoid noise
+      if (next === "connected" && previous === null) return;
+
       // Honor user preference to silence realtime connection toasts
       if (realtimeToastsMutedRef.current) return;
-
-      const last = lastToastedRef.current;
-      // Dedupe: same status+reason within 2s (covers StrictMode double-mount and rapid retries)
-      if (last.status === next && last.reason === reason && Date.now() - last.at < 2000) return;
-      // Skip the very first connected toast for this user session (initial mount noise)
-      if (next === "connected" && last.status === null) {
-        lastToastedRef.current = { status: next, reason, at: Date.now(), userId };
-        return;
-      }
-
-      lastToastedRef.current = { status: next, reason, at: Date.now(), userId };
 
       if (next === "connected") {
         sonnerToast.success("Realtime reconectado", {
@@ -477,59 +444,33 @@ const Chat = () => {
     };
 
     const updateStatus = (next: RealtimeStatus, reason: string) => {
-      if (cancelled) return;
       setRealtimeStatus(next);
       setRealtimeLastChangeAt(new Date());
       setRealtimeReason(reason);
-      if (next !== "connecting") {
-        appendRealtimeLog(next, reason);
-      }
+      appendEvent(next, reason);
       notifyTransition(next, reason);
-    };
-
-    const clearTimer = () => {
-      if (reconnectTimer !== null) {
-        window.clearTimeout(reconnectTimer);
-        reconnectTimer = null;
-      }
-    };
-
-    const teardownChannel = () => {
-      if (channel) {
-        const c = channel;
-        channel = null;
-        void supabase.removeChannel(c).catch(() => undefined);
-      }
     };
 
     const scheduleReconnect = (reason: string) => {
       if (cancelled) return;
       attempt += 1;
       const delay = Math.min(30_000, 1_000 * 2 ** Math.min(attempt - 1, 4));
-      setReconnectAttempts(attempt);
-      setNextRetryAt(Date.now() + delay);
       setRealtimeReason(`${reason} — nova tentativa em ${Math.round(delay / 1000)}s`);
-      clearTimer();
       reconnectTimer = window.setTimeout(() => {
-        reconnectTimer = null;
-        if (cancelled) return;
-        setNextRetryAt(null);
-        connect();
+        if (!cancelled) connect();
       }, delay);
     };
 
     const connect = () => {
       if (cancelled) return;
-      teardownChannel();
       setRealtimeStatus((prev) => (prev === "connected" ? prev : "connecting"));
 
       channel = supabase
-        .channel(`messages:${userId}:${attempt}:${Date.now()}`)
+        .channel(`messages:${user.id}:${attempt}`)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
+          { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
           (payload) => {
-            if (cancelled) return;
             const row = payload.new as { id: string; role: string; content: string; created_at: string };
             if (!isValidMessageRole(row.role)) return;
             const role: MessageRow["role"] = row.role;
@@ -544,9 +485,8 @@ const Chat = () => {
         )
         .on(
           "postgres_changes",
-          { event: "DELETE", schema: "public", table: "messages", filter: `user_id=eq.${userId}` },
+          { event: "DELETE", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
           (payload) => {
-            if (cancelled) return;
             const oldRow = payload.old as { id?: string };
             if (oldRow?.id) {
               setMessages((current) => current.filter((m) => m.id !== oldRow.id));
@@ -556,19 +496,18 @@ const Chat = () => {
           },
         )
         .subscribe((subStatus) => {
-          if (cancelled) return;
           if (subStatus === "SUBSCRIBED") {
             attempt = 0;
-            setReconnectAttempts(0);
-            setNextRetryAt(null);
             updateStatus("connected", "Canal de mensagens ativo");
           } else if (subStatus === "CHANNEL_ERROR") {
             updateStatus("error", "Erro de canal no Supabase Realtime");
-            teardownChannel();
+            void supabase.removeChannel(channel!).catch(() => undefined);
+            channel = null;
             scheduleReconnect("Erro de canal");
           } else if (subStatus === "TIMED_OUT") {
             updateStatus("error", "Tempo limite ao conectar ao Realtime");
-            teardownChannel();
+            void supabase.removeChannel(channel!).catch(() => undefined);
+            channel = null;
             scheduleReconnect("Timeout de conexão");
           } else if (subStatus === "CLOSED") {
             updateStatus("disconnected", "Conexão encerrada pelo servidor");
@@ -580,18 +519,20 @@ const Chat = () => {
     connect();
 
     const handleOnline = () => {
-      if (cancelled) return;
       if (realtimeStatusRef.current !== "connected") {
         attempt = 0;
-        setReconnectAttempts(0);
-        setNextRetryAt(null);
-        clearTimer();
-        teardownChannel();
+        if (reconnectTimer) {
+          window.clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+        if (channel) {
+          void supabase.removeChannel(channel).catch(() => undefined);
+          channel = null;
+        }
         connect();
       }
     };
     const handleOffline = () => {
-      if (cancelled) return;
       updateStatus("disconnected", "Rede do dispositivo offline");
     };
     window.addEventListener("online", handleOnline);
@@ -599,30 +540,13 @@ const Chat = () => {
 
     return () => {
       cancelled = true;
-      clearTimer();
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
       window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
-      teardownChannel();
-      // Reset transient UI state so a stale countdown / attempts badge doesn't bleed into the next session
-      setReconnectAttempts(0);
-      setNextRetryAt(null);
-      setRetryCountdown(null);
+      if (channel) void supabase.removeChannel(channel);
       setRealtimeStatus("disconnected");
     };
-  }, [userId, realtimePaused, reconnectNonce]);
-
-  // When the authenticated user changes (login/logout/switch), drop in-memory chat state
-  // immediately so we don't briefly render the previous user's messages.
-  useEffect(() => {
-    setMessages([]);
-    setRecentSyncs([]);
-    setLastSyncAt(null);
-    setHasMore(false);
-    setReconnectAttempts(0);
-    setNextRetryAt(null);
-    setRetryCountdown(null);
-  }, [userId]);
-
+  }, [user, realtimePaused, reconnectNonce, appendEvent]);
 
   const handleManualReconnect = useCallback(() => {
     if (realtimePaused) return;
@@ -630,28 +554,10 @@ const Chat = () => {
     setRealtimeStatus("connecting");
     setRealtimeReason("Reconexão manual solicitada");
     setRealtimeLastChangeAt(new Date());
-    appendRealtimeLog("manual", "Reconexão manual solicitada");
-    setReconnectAttempts(0);
-    setNextRetryAt(null);
     setReconnectNonce((n) => n + 1);
     // The realtime effect will tear down and re-subscribe; clear the spinner shortly after
     window.setTimeout(() => setReconnecting(false), 1500);
   }, [realtimePaused]);
-
-  // Tick countdown to next retry while a retry is scheduled
-  useEffect(() => {
-    if (nextRetryAt === null) {
-      setRetryCountdown(null);
-      return;
-    }
-    const update = () => {
-      const remaining = Math.max(0, Math.ceil((nextRetryAt - Date.now()) / 1000));
-      setRetryCountdown(remaining);
-    };
-    update();
-    const interval = window.setInterval(update, 500);
-    return () => window.clearInterval(interval);
-  }, [nextRetryAt]);
 
   // Drop recent syncs older than 60s so the counter reflects only the latest activity
   useEffect(() => {
@@ -979,10 +885,8 @@ const Chat = () => {
             onReconnect={handleManualReconnect}
             reconnecting={reconnecting}
             paused={realtimePaused}
-            reconnectAttempts={reconnectAttempts}
-            retryCountdown={retryCountdown}
-            log={realtimeLog}
-            onClearLog={() => { clearRealtimeLog(); setRealtimeLog([]); }}
+            eventLog={eventLog}
+            onClearLog={handleClearEventLog}
           />
           <div ref={scrollRef} className="scrollbar-thin flex-1 space-y-4 overflow-y-auto p-4 md:p-5">
             {hasMore && !loading ? (
