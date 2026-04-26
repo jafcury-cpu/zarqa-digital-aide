@@ -1,7 +1,7 @@
 import { t } from "@/lib/i18n";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronUp, Download, RefreshCw, SendHorizontal, Trash2, Radio } from "lucide-react";
+import { ChevronUp, Download, Pause, Play, RefreshCw, SendHorizontal, Trash2, Radio } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { SectionCard } from "@/components/luize/section-card";
 import { Badge } from "@/components/ui/badge";
