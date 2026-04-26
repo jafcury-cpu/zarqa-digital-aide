@@ -2,6 +2,7 @@
 // and can be toggled cross-tab via the `storage` event.
 
 export const REALTIME_TOAST_PREF_KEY = "luize.chat.realtimeToastsMuted";
+export const CHAT_PREFS_CHANGED_EVENT = "luize:chat-prefs-changed";
 
 export function getRealtimeToastsMuted(): boolean {
   if (typeof window === "undefined") return false;
@@ -17,7 +18,7 @@ export function setRealtimeToastsMuted(muted: boolean): void {
   try {
     window.localStorage.setItem(REALTIME_TOAST_PREF_KEY, muted ? "1" : "0");
     // Notify same-tab listeners (storage event only fires across tabs)
-    window.dispatchEvent(new CustomEvent("luize:chat-prefs-changed"));
+    window.dispatchEvent(new CustomEvent(CHAT_PREFS_CHANGED_EVENT));
   } catch {
     /* ignore quota / privacy mode errors */
   }
