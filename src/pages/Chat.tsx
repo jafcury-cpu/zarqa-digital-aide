@@ -92,13 +92,14 @@ const STATUS_BADGE: Record<WebhookStatus, { variant: "success" | "warning" | "de
   invalid: { variant: "destructive", label: "Webhook inválido" },
 };
 
-type RealtimeStatus = "connecting" | "connected" | "disconnected" | "error";
+type RealtimeStatus = "connecting" | "connected" | "disconnected" | "error" | "paused";
 
 const REALTIME_BADGE: Record<RealtimeStatus, { variant: "success" | "warning" | "destructive" | "secondary"; label: string; dot: string }> = {
   connecting: { variant: "secondary", label: "Conectando realtime", dot: "bg-muted-foreground animate-pulse" },
   connected: { variant: "success", label: "Realtime conectado", dot: "bg-emerald-500 animate-pulse" },
   disconnected: { variant: "warning", label: "Realtime desconectado", dot: "bg-amber-500" },
   error: { variant: "destructive", label: "Realtime com erro", dot: "bg-destructive" },
+  paused: { variant: "secondary", label: "Realtime pausado", dot: "bg-muted-foreground" },
 };
 
 function RealtimeIndicator({
