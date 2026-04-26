@@ -12,7 +12,12 @@ import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { getRealtimeToastsMuted, setRealtimeToastsMuted } from "@/lib/chat-preferences";
+import {
+  CHAT_PREFS_CHANGED_EVENT,
+  getRealtimeToastsMuted,
+  REALTIME_TOAST_PREF_KEY,
+  setRealtimeToastsMuted,
+} from "@/lib/chat-preferences";
 
 function validateWebhookUrl(value: string) {
   if (!value.trim()) return null;
