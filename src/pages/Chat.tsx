@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
+import { getRealtimeToastsMuted, REALTIME_TOAST_PREF_KEY } from "@/lib/chat-preferences";
 import { formatDateTime } from "@/lib/luize-mocks";
 
 const PAGE_SIZE = 200;
