@@ -120,6 +120,41 @@ type RealtimeEvent = {
   reason: string;
 };
 
+function csvEscape(value: string): string {
+  // RFC 4180: wrap in quotes if value has comma, quote, CR or LF; double internal quotes
+  if (/[",\r\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function exportEventLogToCsv(events: RealtimeEvent[]): void {
+  if (typeof window === "undefined" || events.length === 0) return;
+  const header = ["timestamp_iso", "timestamp_local_pt_br", "status", "reason"];
+  const rows = events.map((e) => {
+    const date = new Date(e.at);
+    return [
+      date.toISOString(),
+      date.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+      e.status,
+      e.reason,
+    ].map(csvEscape).join(",");
+  });
+  // Prepend BOM so Excel detects UTF-8 (preserves acentos)
+  const csv = "\uFEFF" + [header.join(","), ...rows].join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `realtime-eventos-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // Defer revoke to allow the download to start in all browsers
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 const EVENT_DOT: Record<RealtimeStatus, string> = {
   connecting: "bg-muted-foreground",
   connected: "bg-emerald-500",
@@ -205,21 +240,34 @@ function RealtimeIndicator({
               </Button>
             </PopoverTrigger>
             <PopoverContent align="start" className="w-80 p-0">
-              <div className="flex items-center justify-between border-b border-border px-3 py-2">
+              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
                 <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
                   Últimos eventos · realtime
                 </p>
                 {eventLog.length > 0 ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={onClearLog}
-                    className="h-6 px-2 text-[10px]"
-                    aria-label="Limpar histórico de eventos"
-                  >
-                    Limpar
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => exportEventLogToCsv(eventLog)}
+                      className="h-6 gap-1 px-2 text-[10px]"
+                      aria-label="Exportar histórico de eventos em CSV"
+                    >
+                      <Download className="size-3" />
+                      CSV
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={onClearLog}
+                      className="h-6 px-2 text-[10px]"
+                      aria-label="Limpar histórico de eventos"
+                    >
+                      Limpar
+                    </Button>
+                  </div>
                 ) : null}
               </div>
               {eventLog.length === 0 ? (
