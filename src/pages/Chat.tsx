@@ -261,7 +261,22 @@ function RealtimeIndicator({
           ) : null}
         </div>
       </div>
-      {reason && status !== "connected" ? (
+      {status === "paused" ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="mt-1 flex items-start gap-2 rounded-md border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-100"
+        >
+          <Pause className="mt-0.5 size-3.5 shrink-0 text-amber-300" aria-hidden="true" />
+          <div className="flex-1">
+            <p className="font-mono uppercase tracking-[0.18em] text-amber-200">Sincronização pausada</p>
+            <p className="mt-0.5 leading-relaxed text-amber-100/90">
+              Novas mensagens enviadas em outras abas ou pelo Telegram <strong>não aparecerão aqui</strong> até você retomar.
+              O envio manual no chat continua funcionando, mas o histórico só atualiza ao recarregar ou ao retomar a sincronização no botão acima.
+            </p>
+          </div>
+        </div>
+      ) : reason && status !== "connected" ? (
         <p className="font-mono text-[11px] text-muted-foreground">{reason}</p>
       ) : null}
     </div>
