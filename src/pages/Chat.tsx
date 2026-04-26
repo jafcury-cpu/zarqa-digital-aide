@@ -465,6 +465,21 @@ const Chat = () => {
     window.setTimeout(() => setReconnecting(false), 1500);
   }, [realtimePaused]);
 
+  // Tick countdown to next retry while a retry is scheduled
+  useEffect(() => {
+    if (nextRetryAt === null) {
+      setRetryCountdown(null);
+      return;
+    }
+    const update = () => {
+      const remaining = Math.max(0, Math.ceil((nextRetryAt - Date.now()) / 1000));
+      setRetryCountdown(remaining);
+    };
+    update();
+    const interval = window.setInterval(update, 500);
+    return () => window.clearInterval(interval);
+  }, [nextRetryAt]);
+
   // Drop recent syncs older than 60s so the counter reflects only the latest activity
   useEffect(() => {
     if (recentSyncs.length === 0) return;
