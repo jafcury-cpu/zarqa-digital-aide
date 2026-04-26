@@ -409,6 +409,7 @@ const Chat = () => {
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const previousScrollHeightRef = useRef<number>(0);
   const realtimeStatusRef = useRef<RealtimeStatus>("connecting");
+  const nextConnectReasonRef = useRef<string>("Conexão inicial");
   useEffect(() => {
     realtimeStatusRef.current = realtimeStatus;
   }, [realtimeStatus]);
@@ -540,6 +541,12 @@ const Chat = () => {
         sonnerToast.error("Falha no realtime", {
           description: `${reason} · tentando reconectar... (${formatNow()})`,
         });
+      } else if (next === "connecting") {
+        // Discreet info toast — only fires on real transitions (e.g. retry, manual reconnect, network back)
+        sonnerToast.info("Conectando ao realtime", {
+          description: `${reason} · ${formatNow()}`,
+          duration: 2500,
+        });
       }
     };
 
@@ -555,17 +562,21 @@ const Chat = () => {
       if (cancelled) return;
       attempt += 1;
       const delay = Math.min(30_000, 1_000 * 2 ** Math.min(attempt - 1, 4));
-      setRealtimeReason(`${reason} — nova tentativa em ${Math.round(delay / 1000)}s`);
+      const seconds = Math.round(delay / 1000);
+      setRealtimeReason(`${reason} — nova tentativa em ${seconds}s`);
       reconnectTimer = window.setTimeout(() => {
-        if (!cancelled) connect();
+        if (!cancelled) connect(`Reconectando (tentativa ${attempt}) após: ${reason}`);
       }, delay);
     };
 
     const ownerId = user.id;
 
-    const connect = () => {
+    const connect = (reason = "Conexão inicial") => {
       if (cancelled) return;
-      setRealtimeStatus((prev) => (prev === "connected" ? prev : "connecting"));
+      // Only emit a "connecting" transition if we're not already connected
+      if (realtimeStatusRef.current !== "connected") {
+        updateStatus("connecting", reason);
+      }
 
       channel = supabase
         .channel(`messages:${ownerId}:${attempt}`)
@@ -624,7 +635,9 @@ const Chat = () => {
         });
     };
 
-    connect();
+    const initialReason = nextConnectReasonRef.current;
+    nextConnectReasonRef.current = "Conexão inicial";
+    connect(initialReason);
 
     const handleOnline = () => {
       if (realtimeStatusRef.current !== "connected") {
@@ -637,7 +650,7 @@ const Chat = () => {
           void supabase.removeChannel(channel).catch(() => undefined);
           channel = null;
         }
-        connect();
+        connect("Rede do dispositivo voltou online");
       }
     };
     const handleOffline = () => {
@@ -659,11 +672,10 @@ const Chat = () => {
   const handleManualReconnect = useCallback(() => {
     if (realtimePaused) return;
     setReconnecting(true);
-    setRealtimeStatus("connecting");
-    setRealtimeReason("Reconexão manual solicitada");
-    setRealtimeLastChangeAt(new Date());
+    nextConnectReasonRef.current = "Reconexão manual solicitada";
     setReconnectNonce((n) => n + 1);
-    // The realtime effect will tear down and re-subscribe; clear the spinner shortly after
+    // The realtime effect will tear down and re-subscribe (firing the "connecting" transition itself);
+    // clear the spinner shortly after
     window.setTimeout(() => setReconnecting(false), 1500);
   }, [realtimePaused]);
 
