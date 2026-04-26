@@ -546,7 +546,7 @@ const Chat = () => {
       if (channel) void supabase.removeChannel(channel);
       setRealtimeStatus("disconnected");
     };
-  }, [user, realtimePaused, reconnectNonce]);
+  }, [user, realtimePaused, reconnectNonce, appendEvent]);
 
   const handleManualReconnect = useCallback(() => {
     if (realtimePaused) return;
@@ -885,6 +885,8 @@ const Chat = () => {
             onReconnect={handleManualReconnect}
             reconnecting={reconnecting}
             paused={realtimePaused}
+            eventLog={eventLog}
+            onClearLog={handleClearEventLog}
           />
           <div ref={scrollRef} className="scrollbar-thin flex-1 space-y-4 overflow-y-auto p-4 md:p-5">
             {hasMore && !loading ? (
