@@ -440,6 +440,12 @@ const Chat = () => {
         sonnerToast.error("Falha no realtime", {
           description: `${reason} · tentando reconectar... (${formatNow()})`,
         });
+      } else if (next === "connecting") {
+        // Discreet info toast — only fires on real transitions (e.g. retry, manual reconnect, network back)
+        sonnerToast.info("Conectando ao realtime", {
+          description: `${reason} · ${formatNow()}`,
+          duration: 2500,
+        });
       }
     };
 
