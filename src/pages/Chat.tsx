@@ -173,6 +173,8 @@ const Chat = () => {
   const [realtimeLastChangeAt, setRealtimeLastChangeAt] = useState<Date | null>(null);
   const [recentSyncs, setRecentSyncs] = useState<Array<{ kind: "insert" | "delete"; at: number }>>([]);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const [realtimePaused, setRealtimePaused] = useState(false);
+  const [resyncing, setResyncing] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const previousScrollHeightRef = useRef<number>(0);
