@@ -120,6 +120,41 @@ type RealtimeEvent = {
   reason: string;
 };
 
+function csvEscape(value: string): string {
+  // RFC 4180: wrap in quotes if value has comma, quote, CR or LF; double internal quotes
+  if (/[",\r\n]/.test(value)) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+  return value;
+}
+
+function exportEventLogToCsv(events: RealtimeEvent[]): void {
+  if (typeof window === "undefined" || events.length === 0) return;
+  const header = ["timestamp_iso", "timestamp_local_pt_br", "status", "reason"];
+  const rows = events.map((e) => {
+    const date = new Date(e.at);
+    return [
+      date.toISOString(),
+      date.toLocaleString("pt-BR", { timeZone: "America/Sao_Paulo" }),
+      e.status,
+      e.reason,
+    ].map(csvEscape).join(",");
+  });
+  // Prepend BOM so Excel detects UTF-8 (preserves acentos)
+  const csv = "\uFEFF" + [header.join(","), ...rows].join("\r\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `realtime-eventos-${stamp}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  // Defer revoke to allow the download to start in all browsers
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
 const EVENT_DOT: Record<RealtimeStatus, string> = {
   connecting: "bg-muted-foreground",
   connected: "bg-emerald-500",
