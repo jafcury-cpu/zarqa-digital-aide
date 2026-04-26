@@ -1,7 +1,7 @@
 import { t } from "@/lib/i18n";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronUp, Download, RefreshCw, SendHorizontal, Trash2 } from "lucide-react";
+import { ChevronUp, Download, RefreshCw, SendHorizontal, Trash2, Radio } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { SectionCard } from "@/components/luize/section-card";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +91,54 @@ const STATUS_BADGE: Record<WebhookStatus, { variant: "success" | "warning" | "de
   invalid: { variant: "destructive", label: "Webhook inválido" },
 };
 
+type RealtimeStatus = "connecting" | "connected" | "disconnected" | "error";
+
+const REALTIME_BADGE: Record<RealtimeStatus, { variant: "success" | "warning" | "destructive" | "secondary"; label: string; dot: string }> = {
+  connecting: { variant: "secondary", label: "Conectando realtime", dot: "bg-muted-foreground animate-pulse" },
+  connected: { variant: "success", label: "Realtime conectado", dot: "bg-emerald-500 animate-pulse" },
+  disconnected: { variant: "warning", label: "Realtime desconectado", dot: "bg-amber-500" },
+  error: { variant: "destructive", label: "Realtime com erro", dot: "bg-destructive" },
+};
+
+function RealtimeIndicator({
+  status,
+  insertCount,
+  deleteCount,
+  lastSyncAt,
+}: {
+  status: RealtimeStatus;
+  insertCount: number;
+  deleteCount: number;
+  lastSyncAt: Date | null;
+}) {
+  const meta = REALTIME_BADGE[status];
+  const total = insertCount + deleteCount;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-panel/60 px-4 py-2 text-xs">
+      <div className="flex items-center gap-2">
+        <span className={`inline-block size-2 rounded-full ${meta.dot}`} aria-hidden="true" />
+        <Radio className="size-3.5 text-muted-foreground" aria-hidden="true" />
+        <span className="font-mono uppercase tracking-[0.18em] text-muted-foreground">{meta.label}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <Badge variant={total > 0 ? "secondary" : "outline"} className="font-mono">
+          {total} sync{total === 1 ? "" : "s"} / 60s
+        </Badge>
+        {total > 0 ? (
+          <span className="font-mono text-muted-foreground">
+            +{insertCount} · −{deleteCount}
+          </span>
+        ) : null}
+        {lastSyncAt ? (
+          <span className="font-mono text-muted-foreground">
+            últ. {lastSyncAt.toLocaleTimeString("pt-BR")}
+          </span>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 const Chat = () => {
   useDocumentTitle("Chat");
   const { user } = useAuth();
@@ -109,6 +157,9 @@ const Chat = () => {
   const [statusDetail, setStatusDetail] = useState<string | null>(null);
   const [latencyMs, setLatencyMs] = useState<number | null>(null);
   const [lastCheckedAt, setLastCheckedAt] = useState<Date | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState<"connecting" | "connected" | "disconnected" | "error">("connecting");
+  const [recentSyncs, setRecentSyncs] = useState<Array<{ kind: "insert" | "delete"; at: number }>>([]);
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const previousScrollHeightRef = useRef<number>(0);
@@ -185,6 +236,8 @@ const Chat = () => {
   useEffect(() => {
     if (!user) return;
 
+    setRealtimeStatus("connecting");
+
     const channel = supabase
       .channel(`messages:${user.id}`)
       .on(
@@ -199,6 +252,8 @@ const Chat = () => {
             const next: MessageRow = { id: row.id, role, content: row.content, created_at: row.created_at };
             return [...current, next];
           });
+          setRecentSyncs((current) => [...current, { kind: "insert", at: Date.now() }]);
+          setLastSyncAt(new Date());
         },
       )
       .on(
@@ -208,15 +263,36 @@ const Chat = () => {
           const oldRow = payload.old as { id?: string };
           if (oldRow?.id) {
             setMessages((current) => current.filter((m) => m.id !== oldRow.id));
+            setRecentSyncs((current) => [...current, { kind: "delete", at: Date.now() }]);
+            setLastSyncAt(new Date());
           }
         },
       )
-      .subscribe();
+      .subscribe((subStatus) => {
+        if (subStatus === "SUBSCRIBED") setRealtimeStatus("connected");
+        else if (subStatus === "CHANNEL_ERROR" || subStatus === "TIMED_OUT") setRealtimeStatus("error");
+        else if (subStatus === "CLOSED") setRealtimeStatus("disconnected");
+        else setRealtimeStatus("connecting");
+      });
 
     return () => {
       void supabase.removeChannel(channel);
+      setRealtimeStatus("disconnected");
     };
   }, [user]);
+
+  // Drop recent syncs older than 60s so the counter reflects only the latest activity
+  useEffect(() => {
+    if (recentSyncs.length === 0) return;
+    const timer = window.setInterval(() => {
+      const cutoff = Date.now() - 60_000;
+      setRecentSyncs((current) => {
+        const filtered = current.filter((entry) => entry.at >= cutoff);
+        return filtered.length === current.length ? current : filtered;
+      });
+    }, 5_000);
+    return () => window.clearInterval(timer);
+  }, [recentSyncs.length]);
 
   // Auto-scroll to bottom on new messages (skip when user just loaded older ones)
   useEffect(() => {
@@ -460,6 +536,12 @@ const Chat = () => {
         }
       >
         <div className="flex min-h-[60vh] flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-panel-elevated">
+          <RealtimeIndicator
+            status={realtimeStatus}
+            insertCount={recentSyncs.filter((s) => s.kind === "insert").length}
+            deleteCount={recentSyncs.filter((s) => s.kind === "delete").length}
+            lastSyncAt={lastSyncAt}
+          />
           <div ref={scrollRef} className="scrollbar-thin flex-1 space-y-4 overflow-y-auto p-4 md:p-5">
             {hasMore && !loading ? (
               <div className="flex justify-center">
