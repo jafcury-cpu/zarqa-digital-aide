@@ -488,6 +488,12 @@ const Chat = () => {
         }
       >
         <div className="flex min-h-[60vh] flex-1 flex-col overflow-hidden rounded-2xl border border-border bg-panel-elevated">
+          <RealtimeIndicator
+            status={realtimeStatus}
+            insertCount={recentSyncs.filter((s) => s.kind === "insert").length}
+            deleteCount={recentSyncs.filter((s) => s.kind === "delete").length}
+            lastSyncAt={lastSyncAt}
+          />
           <div ref={scrollRef} className="scrollbar-thin flex-1 space-y-4 overflow-y-auto p-4 md:p-5">
             {hasMore && !loading ? (
               <div className="flex justify-center">
