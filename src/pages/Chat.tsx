@@ -228,7 +228,7 @@ function RealtimeIndicator({
               {reconnecting ? "Reconectando..." : "Reconectar agora"}
             </Button>
           ) : null}
-          <Popover>
+          <RealtimeHistoryPopover eventLog={eventLog} onClearLog={onClearLog} />
             <PopoverTrigger asChild>
               <Button
                 type="button"
