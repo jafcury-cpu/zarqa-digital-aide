@@ -109,6 +109,9 @@ function RealtimeIndicator({
   lastSyncAt,
   reason,
   lastChangeAt,
+  onReconnect,
+  reconnecting,
+  paused,
 }: {
   status: RealtimeStatus;
   insertCount: number;
@@ -116,10 +119,14 @@ function RealtimeIndicator({
   lastSyncAt: Date | null;
   reason: string | null;
   lastChangeAt: Date | null;
+  onReconnect: () => void;
+  reconnecting: boolean;
+  paused: boolean;
 }) {
   const meta = REALTIME_BADGE[status];
   const total = insertCount + deleteCount;
   const lastUpdate = lastSyncAt ?? lastChangeAt;
+  const canReconnect = !paused && (status === "disconnected" || status === "error" || status === "connecting");
   return (
     <div className="flex flex-col gap-1 border-b border-border bg-panel/60 px-4 py-2 text-xs">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -127,6 +134,20 @@ function RealtimeIndicator({
           <span className={`inline-block size-2 rounded-full ${meta.dot}`} aria-hidden="true" />
           <Radio className="size-3.5 text-muted-foreground" aria-hidden="true" />
           <span className="font-mono uppercase tracking-[0.18em] text-muted-foreground">{meta.label}</span>
+          {canReconnect ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={onReconnect}
+              disabled={reconnecting}
+              className="ml-1 h-7 gap-1.5 px-2 text-[11px]"
+              aria-label="Reconectar ao Supabase Realtime agora"
+            >
+              <RefreshCw className={`size-3 ${reconnecting ? "animate-spin" : ""}`} />
+              {reconnecting ? "Reconectando..." : "Reconectar agora"}
+            </Button>
+          ) : null}
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={total > 0 ? "secondary" : "outline"} className="font-mono">
@@ -174,6 +195,8 @@ const Chat = () => {
   const [realtimeLastChangeAt, setRealtimeLastChangeAt] = useState<Date | null>(null);
   const [recentSyncs, setRecentSyncs] = useState<Array<{ kind: "insert" | "delete"; at: number }>>([]);
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null);
+  const [reconnectNonce, setReconnectNonce] = useState(0);
+  const [reconnecting, setReconnecting] = useState(false);
   const [realtimePaused, setRealtimePaused] = useState(false);
   const [resyncing, setResyncing] = useState(false);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -396,7 +419,18 @@ const Chat = () => {
       if (channel) void supabase.removeChannel(channel);
       setRealtimeStatus("disconnected");
     };
-  }, [user, realtimePaused]);
+  }, [user, realtimePaused, reconnectNonce]);
+
+  const handleManualReconnect = useCallback(() => {
+    if (realtimePaused) return;
+    setReconnecting(true);
+    setRealtimeStatus("connecting");
+    setRealtimeReason("Reconexão manual solicitada");
+    setRealtimeLastChangeAt(new Date());
+    setReconnectNonce((n) => n + 1);
+    // The realtime effect will tear down and re-subscribe; clear the spinner shortly after
+    window.setTimeout(() => setReconnecting(false), 1500);
+  }, [realtimePaused]);
 
   // Drop recent syncs older than 60s so the counter reflects only the latest activity
   useEffect(() => {
@@ -721,6 +755,9 @@ const Chat = () => {
             lastSyncAt={lastSyncAt}
             reason={realtimeReason}
             lastChangeAt={realtimeLastChangeAt}
+            onReconnect={handleManualReconnect}
+            reconnecting={reconnecting}
+            paused={realtimePaused}
           />
           <div ref={scrollRef} className="scrollbar-thin flex-1 space-y-4 overflow-y-auto p-4 md:p-5">
             {hasMore && !loading ? (
