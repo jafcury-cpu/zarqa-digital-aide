@@ -3,6 +3,64 @@
 
 export const REALTIME_TOAST_PREF_KEY = "luize.chat.realtimeToastsMuted";
 export const CHAT_PREFS_CHANGED_EVENT = "luize:chat-prefs-changed";
+export const REALTIME_EVENT_LOG_KEY = "luize.chat.realtimeEventLog";
+export const REALTIME_EVENT_LOG_CHANGED_EVENT = "luize:chat-realtime-log-changed";
+export const REALTIME_EVENT_LOG_MAX = 10;
+
+export type PersistedRealtimeStatus = "connecting" | "connected" | "disconnected" | "error" | "paused";
+export type PersistedRealtimeEvent = {
+  at: number;
+  status: PersistedRealtimeStatus;
+  reason: string;
+};
+
+const VALID_STATUSES: PersistedRealtimeStatus[] = ["connecting", "connected", "disconnected", "error", "paused"];
+
+function isPersistedEvent(value: unknown): value is PersistedRealtimeEvent {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.at === "number" &&
+    Number.isFinite(v.at) &&
+    typeof v.reason === "string" &&
+    typeof v.status === "string" &&
+    VALID_STATUSES.includes(v.status as PersistedRealtimeStatus)
+  );
+}
+
+export function getRealtimeEventLog(): PersistedRealtimeEvent[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const raw = window.localStorage.getItem(REALTIME_EVENT_LOG_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(isPersistedEvent).slice(-REALTIME_EVENT_LOG_MAX);
+  } catch {
+    return [];
+  }
+}
+
+export function setRealtimeEventLog(events: PersistedRealtimeEvent[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    const trimmed = events.slice(-REALTIME_EVENT_LOG_MAX);
+    window.localStorage.setItem(REALTIME_EVENT_LOG_KEY, JSON.stringify(trimmed));
+    window.dispatchEvent(new CustomEvent(REALTIME_EVENT_LOG_CHANGED_EVENT));
+  } catch {
+    /* ignore quota / privacy mode errors */
+  }
+}
+
+export function clearRealtimeEventLog(): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(REALTIME_EVENT_LOG_KEY);
+    window.dispatchEvent(new CustomEvent(REALTIME_EVENT_LOG_CHANGED_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
 
 export function getRealtimeToastsMuted(): boolean {
   if (typeof window === "undefined") return false;
