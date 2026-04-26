@@ -294,7 +294,17 @@ const Chat = () => {
   const [reconnectNonce, setReconnectNonce] = useState(0);
   const [reconnecting, setReconnecting] = useState(false);
   const [realtimePaused, setRealtimePaused] = useState(false);
-  const [resyncing, setResyncing] = useState(false);
+  const [eventLog, setEventLog] = useState<RealtimeEvent[]>([]);
+  const handleClearEventLog = useCallback(() => setEventLog([]), []);
+  const appendEvent = useCallback((status: RealtimeStatus, reason: string) => {
+    setEventLog((current) => {
+      const last = current[current.length - 1];
+      // Dedupe consecutive identical events to avoid noise
+      if (last && last.status === status && last.reason === reason) return current;
+      const next = [...current, { at: Date.now(), status, reason }];
+      return next.length > 10 ? next.slice(next.length - 10) : next;
+    });
+  }, []);
   const endRef = useRef<HTMLDivElement | null>(null);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const previousScrollHeightRef = useRef<number>(0);
