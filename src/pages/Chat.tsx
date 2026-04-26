@@ -547,7 +547,7 @@ const Chat = () => {
           void supabase.removeChannel(channel).catch(() => undefined);
           channel = null;
         }
-        connect();
+        connect("Rede do dispositivo voltou online");
       }
     };
     const handleOffline = () => {
