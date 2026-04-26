@@ -653,6 +653,19 @@ const Chat = () => {
               type="button"
               variant="outline"
               size="sm"
+              onClick={() => { void togglePause(); }}
+              disabled={resyncing}
+              className="h-8 gap-1.5"
+              aria-label={realtimePaused ? "Retomar sincronização realtime" : "Pausar sincronização realtime"}
+              aria-pressed={realtimePaused}
+            >
+              {realtimePaused ? <Play className="size-3.5" /> : <Pause className="size-3.5" />}
+              {resyncing ? "Ressincronizando..." : realtimePaused ? "Retomar" : "Pausar"}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
               onClick={() => { void handleExport(); }}
               disabled={exporting || loading || messages.length === 0}
               className="h-8 gap-1.5"
