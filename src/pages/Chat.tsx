@@ -106,36 +106,46 @@ function RealtimeIndicator({
   insertCount,
   deleteCount,
   lastSyncAt,
+  reason,
+  lastChangeAt,
 }: {
   status: RealtimeStatus;
   insertCount: number;
   deleteCount: number;
   lastSyncAt: Date | null;
+  reason: string | null;
+  lastChangeAt: Date | null;
 }) {
   const meta = REALTIME_BADGE[status];
   const total = insertCount + deleteCount;
+  const lastUpdate = lastSyncAt ?? lastChangeAt;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border bg-panel/60 px-4 py-2 text-xs">
-      <div className="flex items-center gap-2">
-        <span className={`inline-block size-2 rounded-full ${meta.dot}`} aria-hidden="true" />
-        <Radio className="size-3.5 text-muted-foreground" aria-hidden="true" />
-        <span className="font-mono uppercase tracking-[0.18em] text-muted-foreground">{meta.label}</span>
+    <div className="flex flex-col gap-1 border-b border-border bg-panel/60 px-4 py-2 text-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <span className={`inline-block size-2 rounded-full ${meta.dot}`} aria-hidden="true" />
+          <Radio className="size-3.5 text-muted-foreground" aria-hidden="true" />
+          <span className="font-mono uppercase tracking-[0.18em] text-muted-foreground">{meta.label}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <Badge variant={total > 0 ? "secondary" : "outline"} className="font-mono">
+            {total} sync{total === 1 ? "" : "s"} / 60s
+          </Badge>
+          {total > 0 ? (
+            <span className="font-mono text-muted-foreground">
+              +{insertCount} · −{deleteCount}
+            </span>
+          ) : null}
+          {lastUpdate ? (
+            <span className="font-mono text-muted-foreground">
+              últ. {lastUpdate.toLocaleTimeString("pt-BR")}
+            </span>
+          ) : null}
+        </div>
       </div>
-      <div className="flex items-center gap-2">
-        <Badge variant={total > 0 ? "secondary" : "outline"} className="font-mono">
-          {total} sync{total === 1 ? "" : "s"} / 60s
-        </Badge>
-        {total > 0 ? (
-          <span className="font-mono text-muted-foreground">
-            +{insertCount} · −{deleteCount}
-          </span>
-        ) : null}
-        {lastSyncAt ? (
-          <span className="font-mono text-muted-foreground">
-            últ. {lastSyncAt.toLocaleTimeString("pt-BR")}
-          </span>
-        ) : null}
-      </div>
+      {reason && status !== "connected" ? (
+        <p className="font-mono text-[11px] text-muted-foreground">{reason}</p>
+      ) : null}
     </div>
   );
 }
