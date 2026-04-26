@@ -461,17 +461,22 @@ const Chat = () => {
       }, delay);
     };
 
+    const ownerId = user.id;
+
     const connect = () => {
       if (cancelled) return;
       setRealtimeStatus((prev) => (prev === "connected" ? prev : "connecting"));
 
       channel = supabase
-        .channel(`messages:${user.id}:${attempt}`)
+        .channel(`messages:${ownerId}:${attempt}`)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
+          { event: "INSERT", schema: "public", table: "messages", filter: `user_id=eq.${ownerId}` },
           (payload) => {
-            const row = payload.new as { id: string; role: string; content: string; created_at: string };
+            // Defense-in-depth: ignore late events from a stale channel after user switch / unmount
+            if (cancelled) return;
+            const row = payload.new as { id: string; role: string; content: string; created_at: string; user_id?: string };
+            if (row.user_id && row.user_id !== ownerId) return;
             if (!isValidMessageRole(row.role)) return;
             const role: MessageRow["role"] = row.role;
             setMessages((current) => {
@@ -485,9 +490,11 @@ const Chat = () => {
         )
         .on(
           "postgres_changes",
-          { event: "DELETE", schema: "public", table: "messages", filter: `user_id=eq.${user.id}` },
+          { event: "DELETE", schema: "public", table: "messages", filter: `user_id=eq.${ownerId}` },
           (payload) => {
-            const oldRow = payload.old as { id?: string };
+            if (cancelled) return;
+            const oldRow = payload.old as { id?: string; user_id?: string };
+            if (oldRow?.user_id && oldRow.user_id !== ownerId) return;
             if (oldRow?.id) {
               setMessages((current) => current.filter((m) => m.id !== oldRow.id));
               setRecentSyncs((current) => [...current, { kind: "delete", at: Date.now() }]);
@@ -496,6 +503,7 @@ const Chat = () => {
           },
         )
         .subscribe((subStatus) => {
+          if (cancelled) return;
           if (subStatus === "SUBSCRIBED") {
             attempt = 0;
             updateStatus("connected", "Canal de mensagens ativo");
