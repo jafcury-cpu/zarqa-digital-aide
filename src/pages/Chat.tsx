@@ -189,18 +189,53 @@ function RealtimeHistoryPopover({
   onClearLog: () => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<Set<RealtimeStatus>>(new Set());
+  const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
 
   // Listen to global "open history" event (fired from realtime toasts)
   useEffect(() => {
     const handler = () => {
       setOpen(true);
-      // Bring the indicator into view so the popover anchor is visible
       triggerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
     };
     window.addEventListener(OPEN_REALTIME_HISTORY_EVENT, handler);
     return () => window.removeEventListener(OPEN_REALTIME_HISTORY_EVENT, handler);
   }, []);
+
+  const toggleStatus = useCallback((status: RealtimeStatus) => {
+    setStatusFilter((current) => {
+      const next = new Set(current);
+      if (next.has(status)) next.delete(status);
+      else next.add(status);
+      return next;
+    });
+  }, []);
+
+  const clearFilters = useCallback(() => {
+    setStatusFilter(new Set());
+    setDateFilter(undefined);
+  }, []);
+
+  const filteredEvents = useMemo(() => {
+    let result = eventLog;
+    if (statusFilter.size > 0) {
+      result = result.filter((e) => statusFilter.has(e.status));
+    }
+    if (dateFilter) {
+      const start = new Date(dateFilter);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(dateFilter);
+      end.setHours(23, 59, 59, 999);
+      result = result.filter((e) => e.at >= start.getTime() && e.at <= end.getTime());
+    }
+    return result;
+  }, [eventLog, statusFilter, dateFilter]);
+
+  const filtersActive = statusFilter.size > 0 || dateFilter !== undefined;
+  // Status chips — keep meaningful transitions, hide "connecting" intermediate to reduce clutter
+  const filterableStatuses: RealtimeStatus[] = ["connected", "disconnected", "error", "paused", "connecting"];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -222,7 +257,7 @@ function RealtimeHistoryPopover({
           ) : null}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-0">
+      <PopoverContent align="start" className="w-96 p-0">
         <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
           <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
             Últimos eventos · realtime
@@ -233,9 +268,9 @@ function RealtimeHistoryPopover({
                 type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => exportEventLogToCsv(eventLog)}
+                onClick={() => exportEventLogToCsv(filteredEvents)}
                 className="h-6 gap-1 px-2 text-[10px]"
-                aria-label="Exportar histórico de eventos em CSV"
+                aria-label="Exportar histórico filtrado em CSV"
               >
                 <Download className="size-3" />
                 CSV
@@ -253,13 +288,89 @@ function RealtimeHistoryPopover({
             </div>
           ) : null}
         </div>
+
+        {eventLog.length > 0 ? (
+          <div className="flex flex-col gap-2 border-b border-border px-3 py-2">
+            <div className="flex flex-wrap items-center gap-1">
+              {filterableStatuses.map((s) => (
+                <Toggle
+                  key={s}
+                  size="sm"
+                  pressed={statusFilter.has(s)}
+                  onPressedChange={() => toggleStatus(s)}
+                  className="h-6 gap-1 px-2 text-[10px] data-[state=on]:bg-primary/20 data-[state=on]:text-foreground"
+                  aria-label={`Filtrar por ${EVENT_LABEL[s]}`}
+                >
+                  <span className={`inline-block size-1.5 rounded-full ${EVENT_DOT[s]}`} aria-hidden="true" />
+                  {EVENT_LABEL[s]}
+                </Toggle>
+              ))}
+            </div>
+            <div className="flex items-center gap-1">
+              <Popover open={datePickerOpen} onOpenChange={setDatePickerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "h-7 flex-1 justify-start gap-1.5 px-2 text-[11px] font-mono",
+                      !dateFilter && "text-muted-foreground",
+                    )}
+                    aria-label="Filtrar histórico por data"
+                  >
+                    <CalendarIcon className="size-3" />
+                    {dateFilter
+                      ? dateFilter.toLocaleDateString("pt-BR")
+                      : "Filtrar por data"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={dateFilter}
+                    onSelect={(d) => {
+                      setDateFilter(d ?? undefined);
+                      setDatePickerOpen(false);
+                    }}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+              {filtersActive ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="h-7 gap-1 px-2 text-[10px]"
+                  aria-label="Limpar filtros"
+                >
+                  <FilterX className="size-3" />
+                  Limpar filtros
+                </Button>
+              ) : null}
+            </div>
+            {filtersActive ? (
+              <p className="font-mono text-[10px] text-muted-foreground">
+                {filteredEvents.length} de {eventLog.length} evento{eventLog.length === 1 ? "" : "s"}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {eventLog.length === 0 ? (
           <p className="px-3 py-4 text-[11px] text-muted-foreground">
             Nenhum evento registrado ainda nesta sessão.
           </p>
+        ) : filteredEvents.length === 0 ? (
+          <p className="px-3 py-4 text-[11px] text-muted-foreground">
+            Nenhum evento corresponde aos filtros aplicados.
+          </p>
         ) : (
           <ul className="max-h-72 overflow-y-auto py-1">
-            {[...eventLog].reverse().map((event, idx) => (
+            {[...filteredEvents].reverse().map((event, idx) => (
               <li
                 key={`${event.at}-${idx}`}
                 className="flex items-start gap-2 border-b border-border/40 px-3 py-2 last:border-b-0"
@@ -274,7 +385,7 @@ function RealtimeHistoryPopover({
                       {EVENT_LABEL[event.status]}
                     </span>
                     <time className="font-mono text-[10px] text-muted-foreground">
-                      {new Date(event.at).toLocaleTimeString("pt-BR")}
+                      {new Date(event.at).toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                     </time>
                   </div>
                   <p className="mt-0.5 break-words text-[11px] text-muted-foreground">{event.reason}</p>
