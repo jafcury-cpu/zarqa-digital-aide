@@ -171,6 +171,120 @@ const EVENT_LABEL: Record<RealtimeStatus, string> = {
   paused: "Pausado",
 };
 
+const OPEN_REALTIME_HISTORY_EVENT = "luize:open-realtime-history";
+
+function openRealtimeHistory(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(OPEN_REALTIME_HISTORY_EVENT));
+}
+
+function RealtimeHistoryPopover({
+  eventLog,
+  onClearLog,
+}: {
+  eventLog: RealtimeEvent[];
+  onClearLog: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  // Listen to global "open history" event (fired from realtime toasts)
+  useEffect(() => {
+    const handler = () => {
+      setOpen(true);
+      // Bring the indicator into view so the popover anchor is visible
+      triggerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    };
+    window.addEventListener(OPEN_REALTIME_HISTORY_EVENT, handler);
+    return () => window.removeEventListener(OPEN_REALTIME_HISTORY_EVENT, handler);
+  }, []);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          ref={triggerRef}
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 gap-1.5 px-2 text-[11px]"
+          aria-label="Ver histórico de eventos do realtime"
+        >
+          <History className="size-3" />
+          Histórico
+          {eventLog.length > 0 ? (
+            <Badge variant="outline" className="h-4 px-1 font-mono text-[10px]">
+              {eventLog.length}
+            </Badge>
+          ) : null}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 p-0">
+        <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+            Últimos eventos · realtime
+          </p>
+          {eventLog.length > 0 ? (
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => exportEventLogToCsv(eventLog)}
+                className="h-6 gap-1 px-2 text-[10px]"
+                aria-label="Exportar histórico de eventos em CSV"
+              >
+                <Download className="size-3" />
+                CSV
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={onClearLog}
+                className="h-6 px-2 text-[10px]"
+                aria-label="Limpar histórico de eventos"
+              >
+                Limpar
+              </Button>
+            </div>
+          ) : null}
+        </div>
+        {eventLog.length === 0 ? (
+          <p className="px-3 py-4 text-[11px] text-muted-foreground">
+            Nenhum evento registrado ainda nesta sessão.
+          </p>
+        ) : (
+          <ul className="max-h-72 overflow-y-auto py-1">
+            {[...eventLog].reverse().map((event, idx) => (
+              <li
+                key={`${event.at}-${idx}`}
+                className="flex items-start gap-2 border-b border-border/40 px-3 py-2 last:border-b-0"
+              >
+                <span
+                  className={`mt-1 inline-block size-2 shrink-0 rounded-full ${EVENT_DOT[event.status]}`}
+                  aria-hidden="true"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-mono text-[11px] uppercase tracking-wide text-foreground">
+                      {EVENT_LABEL[event.status]}
+                    </span>
+                    <time className="font-mono text-[10px] text-muted-foreground">
+                      {new Date(event.at).toLocaleTimeString("pt-BR")}
+                    </time>
+                  </div>
+                  <p className="mt-0.5 break-words text-[11px] text-muted-foreground">{event.reason}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function RealtimeIndicator({
   status,
   insertCount,
@@ -221,87 +335,7 @@ function RealtimeIndicator({
               {reconnecting ? "Reconectando..." : "Reconectar agora"}
             </Button>
           ) : null}
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-7 gap-1.5 px-2 text-[11px]"
-                aria-label="Ver histórico de eventos do realtime"
-              >
-                <History className="size-3" />
-                Histórico
-                {eventLog.length > 0 ? (
-                  <Badge variant="outline" className="h-4 px-1 font-mono text-[10px]">
-                    {eventLog.length}
-                  </Badge>
-                ) : null}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent align="start" className="w-80 p-0">
-              <div className="flex items-center justify-between gap-2 border-b border-border px-3 py-2">
-                <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                  Últimos eventos · realtime
-                </p>
-                {eventLog.length > 0 ? (
-                  <div className="flex items-center gap-1">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => exportEventLogToCsv(eventLog)}
-                      className="h-6 gap-1 px-2 text-[10px]"
-                      aria-label="Exportar histórico de eventos em CSV"
-                    >
-                      <Download className="size-3" />
-                      CSV
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={onClearLog}
-                      className="h-6 px-2 text-[10px]"
-                      aria-label="Limpar histórico de eventos"
-                    >
-                      Limpar
-                    </Button>
-                  </div>
-                ) : null}
-              </div>
-              {eventLog.length === 0 ? (
-                <p className="px-3 py-4 text-[11px] text-muted-foreground">
-                  Nenhum evento registrado ainda nesta sessão.
-                </p>
-              ) : (
-                <ul className="max-h-72 overflow-y-auto py-1">
-                  {[...eventLog].reverse().map((event, idx) => (
-                    <li
-                      key={`${event.at}-${idx}`}
-                      className="flex items-start gap-2 border-b border-border/40 px-3 py-2 last:border-b-0"
-                    >
-                      <span
-                        className={`mt-1 inline-block size-2 shrink-0 rounded-full ${EVENT_DOT[event.status]}`}
-                        aria-hidden="true"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-mono text-[11px] uppercase tracking-wide text-foreground">
-                            {EVENT_LABEL[event.status]}
-                          </span>
-                          <time className="font-mono text-[10px] text-muted-foreground">
-                            {new Date(event.at).toLocaleTimeString("pt-BR")}
-                          </time>
-                        </div>
-                        <p className="mt-0.5 break-words text-[11px] text-muted-foreground">{event.reason}</p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </PopoverContent>
-          </Popover>
+          <RealtimeHistoryPopover eventLog={eventLog} onClearLog={onClearLog} />
         </div>
         <div className="flex items-center gap-2">
           <Badge variant={total > 0 ? "secondary" : "outline"} className="font-mono">
@@ -529,23 +563,29 @@ const Chat = () => {
       // Honor user preference to silence realtime connection toasts
       if (realtimeToastsMutedRef.current) return;
 
+      const historyAction = { label: "Ver histórico", onClick: () => openRealtimeHistory() };
+
       if (next === "connected") {
         sonnerToast.success("Realtime reconectado", {
           description: `${reason} · atualizado às ${formatNow()}`,
+          action: historyAction,
         });
       } else if (next === "disconnected") {
         sonnerToast.warning("Realtime desconectado", {
           description: `${reason} · última atualização às ${formatNow()}`,
+          action: historyAction,
         });
       } else if (next === "error") {
         sonnerToast.error("Falha no realtime", {
           description: `${reason} · tentando reconectar... (${formatNow()})`,
+          action: historyAction,
         });
       } else if (next === "connecting") {
         // Discreet info toast — only fires on real transitions (e.g. retry, manual reconnect, network back)
         sonnerToast.info("Conectando ao realtime", {
           description: `${reason} · ${formatNow()}`,
           duration: 2500,
+          action: historyAction,
         });
       }
     };
