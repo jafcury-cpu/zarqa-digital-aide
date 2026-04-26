@@ -23,6 +23,17 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
 import { getRealtimeToastsMuted, REALTIME_TOAST_PREF_KEY } from "@/lib/chat-preferences";
+import {
+  appendRealtimeLog,
+  clearRealtimeLog,
+  getRealtimeLog,
+  REALTIME_LOG_EVENT,
+  REALTIME_LOG_KEY,
+  REALTIME_LOG_MAX,
+  type RealtimeLogEntry,
+} from "@/lib/realtime-log";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { History } from "lucide-react";
 import { formatDateTime } from "@/lib/luize-mocks";
 
 const PAGE_SIZE = 200;
@@ -115,6 +126,8 @@ function RealtimeIndicator({
   paused,
   reconnectAttempts,
   retryCountdown,
+  log,
+  onClearLog,
 }: {
   status: RealtimeStatus;
   insertCount: number;
@@ -127,6 +140,8 @@ function RealtimeIndicator({
   paused: boolean;
   reconnectAttempts: number;
   retryCountdown: number | null;
+  log: RealtimeLogEntry[];
+  onClearLog: () => void;
 }) {
   const meta = REALTIME_BADGE[status];
   const total = insertCount + deleteCount;
@@ -175,6 +190,79 @@ function RealtimeIndicator({
               últ. {lastUpdate.toLocaleTimeString("pt-BR")}
             </span>
           ) : null}
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 gap-1.5 px-2 text-[11px]"
+                aria-label={`Ver últimos ${REALTIME_LOG_MAX} eventos do realtime`}
+                title={`Últimos ${REALTIME_LOG_MAX} eventos de conexão`}
+              >
+                <History className="size-3" />
+                histórico
+                {log.length > 0 ? (
+                  <span className="font-mono text-[10px] text-muted-foreground">({log.length})</span>
+                ) : null}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" className="w-80 p-0">
+              <div className="flex items-center justify-between border-b border-border px-3 py-2">
+                <p className="text-xs font-medium text-foreground">
+                  Últimos eventos do realtime
+                </p>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={onClearLog}
+                  disabled={log.length === 0}
+                  className="h-6 px-2 text-[11px] text-muted-foreground"
+                >
+                  Limpar
+                </Button>
+              </div>
+              {log.length === 0 ? (
+                <p className="px-3 py-4 text-center text-xs text-muted-foreground">
+                  Nenhum evento registrado ainda.
+                </p>
+              ) : (
+                <ul className="max-h-72 divide-y divide-border overflow-y-auto">
+                  {log.map((entry) => {
+                    const meta = REALTIME_BADGE[entry.kind === "manual" ? "connecting" : entry.kind];
+                    return (
+                      <li key={`${entry.at}-${entry.kind}`} className="flex items-start gap-2 px-3 py-2">
+                        <span
+                          className={`mt-1.5 inline-block size-2 shrink-0 rounded-full ${meta.dot}`}
+                          aria-hidden="true"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[11px] font-medium uppercase tracking-[0.12em] text-foreground">
+                              {entry.kind === "manual" ? "manual" : meta.label}
+                            </span>
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              {new Date(entry.at).toLocaleString("pt-BR", {
+                                day: "2-digit",
+                                month: "2-digit",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                                second: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 break-words text-xs text-muted-foreground">
+                            {entry.reason}
+                          </p>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
       {reason && status !== "connected" ? (
@@ -210,6 +298,7 @@ const Chat = () => {
   const [reconnectAttempts, setReconnectAttempts] = useState(0);
   const [nextRetryAt, setNextRetryAt] = useState<number | null>(null);
   const [retryCountdown, setRetryCountdown] = useState<number | null>(null);
+  const [realtimeLog, setRealtimeLog] = useState<RealtimeLogEntry[]>(() => getRealtimeLog());
   const [reconnectNonce, setReconnectNonce] = useState(0);
   const [reconnecting, setReconnecting] = useState(false);
   const [realtimePaused, setRealtimePaused] = useState(false);
@@ -236,6 +325,20 @@ const Chat = () => {
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("luize:chat-prefs-changed", sync);
+    };
+  }, []);
+
+  // Subscribe to realtime-log changes (cross-tab via `storage`, same-tab via custom event)
+  useEffect(() => {
+    const refresh = () => setRealtimeLog(getRealtimeLog());
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === REALTIME_LOG_KEY) refresh();
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(REALTIME_LOG_EVENT, refresh);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(REALTIME_LOG_EVENT, refresh);
     };
   }, []);
 
@@ -315,6 +418,7 @@ const Chat = () => {
       setRealtimeStatus("paused");
       setRealtimeReason("Sincronização pausada manualmente");
       setRealtimeLastChangeAt(new Date());
+      appendRealtimeLog("paused", "Sincronização pausada manualmente");
       return;
     }
 
@@ -356,6 +460,10 @@ const Chat = () => {
       setRealtimeStatus(next);
       setRealtimeLastChangeAt(new Date());
       setRealtimeReason(reason);
+      // Persist transition to the recent log (skip the initial "connecting" noise)
+      if (next !== "connecting") {
+        appendRealtimeLog(next, reason);
+      }
       notifyTransition(next, reason);
     };
 
@@ -469,6 +577,7 @@ const Chat = () => {
     setRealtimeStatus("connecting");
     setRealtimeReason("Reconexão manual solicitada");
     setRealtimeLastChangeAt(new Date());
+    appendRealtimeLog("manual", "Reconexão manual solicitada");
     setReconnectAttempts(0);
     setNextRetryAt(null);
     setReconnectNonce((n) => n + 1);
@@ -819,6 +928,8 @@ const Chat = () => {
             paused={realtimePaused}
             reconnectAttempts={reconnectAttempts}
             retryCountdown={retryCountdown}
+            log={realtimeLog}
+            onClearLog={() => { clearRealtimeLog(); setRealtimeLog([]); }}
           />
           <div ref={scrollRef} className="scrollbar-thin flex-1 space-y-4 overflow-y-auto p-4 md:p-5">
             {hasMore && !loading ? (
