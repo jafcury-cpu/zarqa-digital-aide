@@ -22,6 +22,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
+import { getRealtimeToastsMuted, REALTIME_TOAST_PREF_KEY } from "@/lib/chat-preferences";
 import { formatDateTime } from "@/lib/luize-mocks";
 
 const PAGE_SIZE = 200;
@@ -207,6 +208,23 @@ const Chat = () => {
     realtimeStatusRef.current = realtimeStatus;
   }, [realtimeStatus]);
 
+  // Live preference: silence realtime connection toasts (per-device, stored in localStorage)
+  const realtimeToastsMutedRef = useRef<boolean>(getRealtimeToastsMuted());
+  useEffect(() => {
+    const sync = () => {
+      realtimeToastsMutedRef.current = getRealtimeToastsMuted();
+    };
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === REALTIME_TOAST_PREF_KEY) sync();
+    };
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("luize:chat-prefs-changed", sync);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("luize:chat-prefs-changed", sync);
+    };
+  }, []);
+
   const checkWebhook = useCallback(async () => {
     setStatus("checking");
     setStatusDetail(null);
@@ -301,6 +319,9 @@ const Chat = () => {
 
       // Skip the very first "connected" toast on initial mount to avoid noise
       if (next === "connected" && previous === null) return;
+
+      // Honor user preference to silence realtime connection toasts
+      if (realtimeToastsMutedRef.current) return;
 
       if (next === "connected") {
         sonnerToast.success("Realtime reconectado", {
