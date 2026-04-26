@@ -171,6 +171,13 @@ const EVENT_LABEL: Record<RealtimeStatus, string> = {
   paused: "Pausado",
 };
 
+const OPEN_REALTIME_HISTORY_EVENT = "luize:open-realtime-history";
+
+function openRealtimeHistory(): void {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new CustomEvent(OPEN_REALTIME_HISTORY_EVENT));
+}
+
 function RealtimeIndicator({
   status,
   insertCount,
