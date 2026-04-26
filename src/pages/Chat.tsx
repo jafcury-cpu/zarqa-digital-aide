@@ -461,17 +461,21 @@ const Chat = () => {
       if (cancelled) return;
       attempt += 1;
       const delay = Math.min(30_000, 1_000 * 2 ** Math.min(attempt - 1, 4));
-      setRealtimeReason(`${reason} — nova tentativa em ${Math.round(delay / 1000)}s`);
+      const seconds = Math.round(delay / 1000);
+      setRealtimeReason(`${reason} — nova tentativa em ${seconds}s`);
       reconnectTimer = window.setTimeout(() => {
-        if (!cancelled) connect();
+        if (!cancelled) connect(`Reconectando (tentativa ${attempt}) após: ${reason}`);
       }, delay);
     };
 
     const ownerId = user.id;
 
-    const connect = () => {
+    const connect = (reason = "Conexão inicial") => {
       if (cancelled) return;
-      setRealtimeStatus((prev) => (prev === "connected" ? prev : "connecting"));
+      // Only emit a "connecting" transition if we're not already connected
+      if (realtimeStatusRef.current !== "connected") {
+        updateStatus("connecting", reason);
+      }
 
       channel = supabase
         .channel(`messages:${ownerId}:${attempt}`)
