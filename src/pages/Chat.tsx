@@ -30,12 +30,17 @@ import {
   CHAT_PREFS_CHANGED_EVENT,
   clearRealtimeEventLog,
   getRealtimeEventLog,
+  getRealtimeStatusSnapshot,
   getRealtimeToastSeverity,
+  getTabId,
   REALTIME_EVENT_LOG_CHANGED_EVENT,
   REALTIME_EVENT_LOG_KEY,
   REALTIME_EVENT_LOG_MAX,
+  REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT,
+  REALTIME_STATUS_SNAPSHOT_KEY,
   REALTIME_TOAST_SEVERITY_KEY,
   setRealtimeEventLog,
+  setRealtimeStatusSnapshot,
   shouldShowRealtimeToast,
   type RealtimeToastSeverity,
 } from "@/lib/chat-preferences";
@@ -527,7 +532,7 @@ const Chat = () => {
     setEventLog((current) => {
       const last = current[current.length - 1];
       if (last && last.status === status && last.reason === reason) return current;
-      const merged = [...current, { at: Date.now(), status, reason }];
+      const merged = [...current, { at: Date.now(), status, reason, tabId: getTabId() }];
       const next = merged.length > REALTIME_EVENT_LOG_MAX ? merged.slice(merged.length - REALTIME_EVENT_LOG_MAX) : merged;
       setRealtimeEventLog(next);
       return next;
@@ -553,6 +558,55 @@ const Chat = () => {
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener(REALTIME_EVENT_LOG_CHANGED_EVENT, sync);
+    };
+  }, []);
+
+  // Cross-tab live mirror of the realtime connection status.
+  // When another tab updates the snapshot, reflect it locally and emit a discreet toast
+  // so the user sees the change live regardless of which tab triggered it.
+  useEffect(() => {
+    const ownTabId = getTabId();
+    let lastAppliedAt = 0;
+
+    const apply = (notify: boolean) => {
+      const snap = getRealtimeStatusSnapshot();
+      if (!snap) return;
+      if (snap.tabId === ownTabId) return; // local change, already handled inline
+      if (snap.at <= lastAppliedAt) return;
+      lastAppliedAt = snap.at;
+
+      // Mirror state so the badge/UI reflects the live status from the other tab
+      setRealtimeStatus(snap.status);
+      setRealtimeReason(snap.reason);
+      setRealtimeLastChangeAt(new Date(snap.at));
+
+      if (!notify) return;
+      if (!shouldShowRealtimeToast(realtimeToastSeverityRef.current, snap.status)) return;
+
+      const time = new Date(snap.at).toLocaleTimeString("pt-BR");
+      const description = `${snap.reason} · em outra aba às ${time}`;
+      const action = { label: "Ver histórico", onClick: () => openRealtimeHistory() };
+      const opts = { description, action } as const;
+
+      if (snap.status === "connected") sonnerToast.success("Realtime reconectado", opts);
+      else if (snap.status === "disconnected") sonnerToast.warning("Realtime desconectado", opts);
+      else if (snap.status === "error") sonnerToast.error("Falha no realtime", opts);
+      else if (snap.status === "connecting") sonnerToast.info("Conectando ao realtime", { ...opts, duration: 2500 });
+      else if (snap.status === "paused") sonnerToast.info("Sincronização pausada", opts);
+    };
+
+    // Adopt initial snapshot silently (no toast on mount)
+    apply(false);
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === REALTIME_STATUS_SNAPSHOT_KEY) apply(true);
+    };
+    const onLocal = () => apply(true);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT, onLocal);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT, onLocal);
     };
   }, []);
   const endRef = useRef<HTMLDivElement | null>(null);
@@ -654,9 +708,11 @@ const Chat = () => {
     if (!user) return;
     if (realtimePaused) {
       // Pause: skip subscribing entirely; cleanup runs on next pause toggle / unmount
+      const reason = "Sincronização pausada manualmente";
       setRealtimeStatus("paused");
-      setRealtimeReason("Sincronização pausada manualmente");
+      setRealtimeReason(reason);
       setRealtimeLastChangeAt(new Date());
+      setRealtimeStatusSnapshot({ status: "paused", reason, at: Date.now(), tabId: getTabId() });
       return;
     }
 
@@ -712,6 +768,8 @@ const Chat = () => {
       setRealtimeReason(reason);
       appendEvent(next, reason);
       notifyTransition(next, reason);
+      // Publish snapshot so other tabs can mirror this state instantly
+      setRealtimeStatusSnapshot({ status: next, reason, at: Date.now(), tabId: getTabId() });
     };
 
     const scheduleReconnect = (reason: string) => {

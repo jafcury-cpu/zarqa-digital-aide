@@ -7,6 +7,29 @@ export const CHAT_PREFS_CHANGED_EVENT = "luize:chat-prefs-changed";
 export const REALTIME_EVENT_LOG_KEY = "luize.chat.realtimeEventLog";
 export const REALTIME_EVENT_LOG_CHANGED_EVENT = "luize:chat-realtime-log-changed";
 export const REALTIME_EVENT_LOG_MAX = 10;
+export const REALTIME_STATUS_SNAPSHOT_KEY = "luize.chat.realtimeStatusSnapshot";
+export const REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT = "luize:chat-realtime-status-changed";
+
+// Per-tab id used to detect cross-tab transitions vs. local ones.
+let TAB_ID: string | null = null;
+export function getTabId(): string {
+  if (TAB_ID) return TAB_ID;
+  if (typeof window === "undefined") return "ssr";
+  try {
+    const existing = window.sessionStorage.getItem("luize.chat.tabId");
+    if (existing) {
+      TAB_ID = existing;
+      return TAB_ID;
+    }
+    const fresh = `tab-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    window.sessionStorage.setItem("luize.chat.tabId", fresh);
+    TAB_ID = fresh;
+    return TAB_ID;
+  } catch {
+    TAB_ID = `tab-${Math.random().toString(36).slice(2, 10)}`;
+    return TAB_ID;
+  }
+}
 
 export type RealtimeToastSeverity = "all" | "warnings_and_errors" | "errors_only" | "none";
 export const REALTIME_TOAST_SEVERITIES: RealtimeToastSeverity[] = [
@@ -71,6 +94,15 @@ export type PersistedRealtimeEvent = {
   at: number;
   status: PersistedRealtimeStatus;
   reason: string;
+  /** Tab that produced this event. Used to detect cross-tab transitions. */
+  tabId?: string;
+};
+
+export type PersistedRealtimeStatusSnapshot = {
+  status: PersistedRealtimeStatus;
+  reason: string;
+  at: number;
+  tabId: string;
 };
 
 const VALID_STATUSES: PersistedRealtimeStatus[] = ["connecting", "connected", "disconnected", "error", "paused"];
@@ -116,6 +148,41 @@ export function clearRealtimeEventLog(): void {
   try {
     window.localStorage.removeItem(REALTIME_EVENT_LOG_KEY);
     window.dispatchEvent(new CustomEvent(REALTIME_EVENT_LOG_CHANGED_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
+
+function isSnapshot(value: unknown): value is PersistedRealtimeStatusSnapshot {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.status === "string" &&
+    VALID_STATUSES.includes(v.status as PersistedRealtimeStatus) &&
+    typeof v.reason === "string" &&
+    typeof v.at === "number" &&
+    Number.isFinite(v.at) &&
+    typeof v.tabId === "string"
+  );
+}
+
+export function getRealtimeStatusSnapshot(): PersistedRealtimeStatusSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(REALTIME_STATUS_SNAPSHOT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return isSnapshot(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setRealtimeStatusSnapshot(snapshot: PersistedRealtimeStatusSnapshot): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(REALTIME_STATUS_SNAPSHOT_KEY, JSON.stringify(snapshot));
+    window.dispatchEvent(new CustomEvent(REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT));
   } catch {
     /* ignore */
   }
