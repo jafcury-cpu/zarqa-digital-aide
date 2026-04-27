@@ -368,6 +368,77 @@ const SEVERITY_HINTS: Record<RealtimeToastSeverity, string> = {
   none: "Nenhum toast deve aparecer — a categoria está silenciada.",
 };
 
+const TRANSITION_ROWS: Array<{
+  status: SimulatedStatus;
+  label: string;
+  toastKind: "info" | "success" | "warning" | "error";
+  description: string;
+}> = [
+  { status: "connecting", label: "Conectando", toastKind: "info", description: "Tentando estabelecer ou retomar o canal" },
+  { status: "connected", label: "Reconectado", toastKind: "success", description: "Canal voltou a ficar ativo" },
+  { status: "disconnected", label: "Desconectado", toastKind: "warning", description: "Canal caiu de forma inesperada" },
+  { status: "error", label: "Falha", toastKind: "error", description: "Erro persistente no canal realtime" },
+];
+
+const TOAST_KIND_BADGE: Record<"info" | "success" | "warning" | "error", string> = {
+  info: "bg-accent-blue/15 text-accent-blue",
+  success: "bg-accent-green/15 text-accent-green",
+  warning: "bg-amber-500/15 text-amber-400",
+  error: "bg-destructive/15 text-destructive",
+};
+
+function SeverityMatrix({ severity }: { severity: RealtimeToastSeverity }) {
+  const visibleCount = TRANSITION_ROWS.filter((row) => shouldShowRealtimeToast(severity, row.status)).length;
+  return (
+    <div className="rounded-xl border border-border/70 bg-background/40 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          O que aparece com a severidade selecionada
+        </p>
+        <span className="text-xs text-muted-foreground">
+          {visibleCount} de {TRANSITION_ROWS.length} transições
+        </span>
+      </div>
+      <ul className="divide-y divide-border/60">
+        {TRANSITION_ROWS.map((row) => {
+          const visible = shouldShowRealtimeToast(severity, row.status);
+          return (
+            <li
+              key={row.status}
+              className="flex items-center justify-between gap-3 py-2 text-sm"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                {visible ? (
+                  <Check className="size-4 shrink-0 text-accent-green" aria-label="Mostrado" />
+                ) : (
+                  <X className="size-4 shrink-0 text-muted-foreground" aria-label="Oculto" />
+                )}
+                <span
+                  className={cn(
+                    "rounded-md px-2 py-0.5 text-xs font-medium",
+                    TOAST_KIND_BADGE[row.toastKind],
+                  )}
+                >
+                  {row.label}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">{row.description}</span>
+              </div>
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  visible ? "text-foreground" : "text-muted-foreground/70 line-through",
+                )}
+              >
+                {visible ? "Mostrado" : "Oculto"}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
 function RealtimeToastSimulator({ severity }: { severity: RealtimeToastSeverity }) {
   const [running, setRunning] = useState(false);
 
