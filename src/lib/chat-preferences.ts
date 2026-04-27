@@ -187,6 +187,8 @@ export function setRealtimeStatusSnapshot(snapshot: PersistedRealtimeStatusSnaps
     /* ignore */
   }
 }
+
+export function getRealtimeToastsMuted(): boolean {
   if (typeof window === "undefined") return false;
   try {
     return window.localStorage.getItem(REALTIME_TOAST_PREF_KEY) === "1";
