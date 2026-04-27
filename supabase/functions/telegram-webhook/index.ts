@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2.101.1";
+import { z } from "npm:zod@3.25.76";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -21,6 +22,23 @@ Exemplos:
 "uber 32" → {"description":"Uber","amount":-32,"category":"Transporte","date":"hoje","status":"pago"}
 "recebi 1000 de dividendos" → {"description":"Dividendos","amount":1000,"category":"Receitas","date":"hoje","status":"pago"}`;
 
+const txSchema = z.object({
+  description: z.string().trim().min(1).max(255),
+  amount: z.number().finite().min(-1_000_000_000).max(1_000_000_000),
+  category: z.enum([
+    "Moradia",
+    "Saúde",
+    "Transporte",
+    "Educação",
+    "Lazer",
+    "Alimentação",
+    "Receitas",
+    "Outros",
+  ]),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  status: z.enum(["pago", "pendente", "atrasado"]),
+});
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
 
@@ -37,7 +55,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
     }
 
-    // Find the user whose bot token matches the secret
     const { data: settings } = await supabase
       .from("settings")
       .select("user_id, telegram_chat_id")
@@ -54,7 +71,6 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
-    // Validate chat_id if configured
     if (settings.telegram_chat_id && String(message.chat?.id) !== settings.telegram_chat_id) {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
@@ -99,15 +115,34 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ ok: true }), { status: 200 });
     }
 
-    await supabase.from("transactions").insert({
+    // Coerce amount to number before validation (AI may emit string)
+    const candidate = {
+      description: typeof parsed.description === "string" ? parsed.description : String(message.text).slice(0, 100),
+      amount: typeof parsed.amount === "number" ? parsed.amount : Number(parsed.amount),
+      category: parsed.category,
+      date: typeof parsed.date === "string" ? parsed.date : today,
+      status: parsed.status ?? "pago",
+    };
+
+    const validated = txSchema.safeParse(candidate);
+    if (!validated.success) {
+      console.error("telegram-webhook validation failed:", validated.error.flatten());
+      return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    }
+
+    const { error: insertError } = await supabase.from("transactions").insert({
       user_id: settings.user_id,
-      description: String(parsed.description ?? message.text.slice(0, 100)),
-      amount: Number(parsed.amount ?? 0),
-      category: String(parsed.category ?? "Outros"),
-      date: String(parsed.date ?? today),
-      status: String(parsed.status ?? "pago"),
+      description: validated.data.description,
+      amount: validated.data.amount,
+      category: validated.data.category,
+      date: validated.data.date,
+      status: validated.data.status,
       source: "telegram",
     });
+
+    if (insertError) {
+      console.error("telegram-webhook insert error:", insertError);
+    }
 
     return new Response(JSON.stringify({ ok: true }), { status: 200 });
   } catch (e) {
