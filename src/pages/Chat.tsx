@@ -216,7 +216,7 @@ function RealtimeHistoryPopover({
     return () => window.removeEventListener(OPEN_REALTIME_HISTORY_EVENT, handler);
   }, []);
 
-  const toggleStatus = useCallback((status: RealtimeStatus) => {
+  const toggleStatus = useCallback((status: RealtimeEventStatus) => {
     setStatusFilter((current) => {
       const next = new Set(current);
       if (next.has(status)) next.delete(status);
