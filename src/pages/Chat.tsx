@@ -560,7 +560,55 @@ const Chat = () => {
       window.removeEventListener(REALTIME_EVENT_LOG_CHANGED_EVENT, sync);
     };
   }, []);
-  const endRef = useRef<HTMLDivElement | null>(null);
+
+  // Cross-tab live mirror of the realtime connection status.
+  // When another tab updates the snapshot, reflect it locally and emit a discreet toast
+  // so the user sees the change live regardless of which tab triggered it.
+  useEffect(() => {
+    const ownTabId = getTabId();
+    let lastAppliedAt = 0;
+
+    const apply = (notify: boolean) => {
+      const snap = getRealtimeStatusSnapshot();
+      if (!snap) return;
+      if (snap.tabId === ownTabId) return; // local change, already handled inline
+      if (snap.at <= lastAppliedAt) return;
+      lastAppliedAt = snap.at;
+
+      // Mirror state so the badge/UI reflects the live status from the other tab
+      setRealtimeStatus(snap.status);
+      setRealtimeReason(snap.reason);
+      setRealtimeLastChangeAt(new Date(snap.at));
+
+      if (!notify) return;
+      if (!shouldShowRealtimeToast(realtimeToastSeverityRef.current, snap.status)) return;
+
+      const time = new Date(snap.at).toLocaleTimeString("pt-BR");
+      const description = `${snap.reason} · em outra aba às ${time}`;
+      const action = { label: "Ver histórico", onClick: () => openRealtimeHistory() };
+      const opts = { description, action } as const;
+
+      if (snap.status === "connected") sonnerToast.success("Realtime reconectado", opts);
+      else if (snap.status === "disconnected") sonnerToast.warning("Realtime desconectado", opts);
+      else if (snap.status === "error") sonnerToast.error("Falha no realtime", opts);
+      else if (snap.status === "connecting") sonnerToast.info("Conectando ao realtime", { ...opts, duration: 2500 });
+      else if (snap.status === "paused") sonnerToast.info("Sincronização pausada", opts);
+    };
+
+    // Adopt initial snapshot silently (no toast on mount)
+    apply(false);
+
+    const onStorage = (event: StorageEvent) => {
+      if (event.key === REALTIME_STATUS_SNAPSHOT_KEY) apply(true);
+    };
+    const onLocal = () => apply(true);
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT, onLocal);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT, onLocal);
+    };
+  }, []);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const previousScrollHeightRef = useRef<number>(0);
   const realtimeStatusRef = useRef<RealtimeStatus>("connecting");
