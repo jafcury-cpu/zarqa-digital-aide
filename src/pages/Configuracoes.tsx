@@ -1,6 +1,6 @@
 import { t } from "@/lib/i18n";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { BellRing, Copy, Link2, Save, Send, BellOff } from "lucide-react";
+import { BellRing, Copy, Link2, Save, Send, BellOff, Radio } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { SectionCard } from "@/components/luize/section-card";
 import { Badge } from "@/components/ui/badge";
@@ -12,12 +12,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { toast as sonnerToast } from "sonner";
 import {
   CHAT_PREFS_CHANGED_EVENT,
   getRealtimeToastSeverity,
   REALTIME_TOAST_SEVERITY_KEY,
   setRealtimeToastSeverity,
+  shouldShowRealtimeToast,
   type RealtimeToastSeverity,
+  type PersistedRealtimeStatus,
 } from "@/lib/chat-preferences";
 
 function validateWebhookUrl(value: string) {
@@ -269,6 +272,8 @@ const Configuracoes = () => {
             </Select>
           </div>
 
+          <RealtimeToastSimulator severity={toastSeverity} />
+
           <Button type="submit" variant="hero" disabled={saving || loading || Boolean(webhookError)}>
             <Save className="size-4" />
             {saving ? "Salvando..." : "Salvar configurações"}
@@ -310,5 +315,76 @@ const Configuracoes = () => {
     </div>
   );
 };
+
+type SimulatedStatus = Extract<PersistedRealtimeStatus, "connecting" | "connected" | "disconnected" | "error">;
+
+const SIMULATED_SEQUENCE: Array<{ status: SimulatedStatus; reason: string }> = [
+  { status: "connecting", reason: "Teste manual: tentando conectar" },
+  { status: "connected", reason: "Teste manual: canal ativo" },
+  { status: "disconnected", reason: "Teste manual: queda simulada" },
+  { status: "error", reason: "Teste manual: falha simulada" },
+];
+
+const SEVERITY_HINTS: Record<RealtimeToastSeverity, string> = {
+  all: "Você deve ver os 4 toasts (info, success, warning, error).",
+  warnings_and_errors: "Você deve ver apenas 2 toasts: desconectado (warning) e falha (error).",
+  errors_only: "Você deve ver apenas 1 toast: falha (error).",
+  none: "Nenhum toast deve aparecer — a categoria está silenciada.",
+};
+
+function RealtimeToastSimulator({ severity }: { severity: RealtimeToastSeverity }) {
+  const [running, setRunning] = useState(false);
+
+  const runSimulation = async () => {
+    if (running) return;
+    setRunning(true);
+    const expected = SIMULATED_SEQUENCE.filter((step) => shouldShowRealtimeToast(severity, step.status));
+
+    sonnerToast.message("Simulação iniciada", {
+      description: `Severidade atual: ${severity}. Esperado: ${expected.length} toast${expected.length === 1 ? "" : "s"}.`,
+      duration: 2500,
+    });
+
+    for (const step of SIMULATED_SEQUENCE) {
+      // Honor severity exactly like Chat.tsx does
+      if (shouldShowRealtimeToast(severity, step.status)) {
+        const time = new Date().toLocaleTimeString("pt-BR");
+        const description = `${step.reason} · simulado às ${time}`;
+        if (step.status === "connected") sonnerToast.success("Realtime reconectado", { description });
+        else if (step.status === "disconnected") sonnerToast.warning("Realtime desconectado", { description });
+        else if (step.status === "error") sonnerToast.error("Falha no realtime", { description });
+        else sonnerToast.info("Conectando ao realtime", { description, duration: 2500 });
+      }
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    }
+
+    setRunning(false);
+  };
+
+  return (
+    <div className="flex flex-col gap-3 rounded-2xl border border-dashed border-border bg-panel-elevated p-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-1 items-start gap-3">
+        <Radio className="mt-0.5 size-4 text-accent-blue" />
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">Testar toasts de realtime</p>
+          <p className="text-sm text-muted-foreground">
+            Dispara um connecting → connected → disconnected → error simulado. Apenas os toasts permitidos pela severidade
+            atual aparecerão. {SEVERITY_HINTS[severity]}
+          </p>
+        </div>
+      </div>
+      <Button
+        type="button"
+        variant="outline"
+        onClick={runSimulation}
+        disabled={running}
+        aria-label="Disparar simulação de toasts de realtime"
+      >
+        <Radio className="size-4" />
+        {running ? "Simulando..." : "Disparar teste"}
+      </Button>
+    </div>
+  );
+}
 
 export default Configuracoes;
