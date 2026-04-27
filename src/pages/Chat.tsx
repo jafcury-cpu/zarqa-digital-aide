@@ -30,12 +30,14 @@ import {
   CHAT_PREFS_CHANGED_EVENT,
   clearRealtimeEventLog,
   getRealtimeEventLog,
-  getRealtimeToastsMuted,
+  getRealtimeToastSeverity,
   REALTIME_EVENT_LOG_CHANGED_EVENT,
   REALTIME_EVENT_LOG_KEY,
   REALTIME_EVENT_LOG_MAX,
-  REALTIME_TOAST_PREF_KEY,
+  REALTIME_TOAST_SEVERITY_KEY,
   setRealtimeEventLog,
+  shouldShowRealtimeToast,
+  type RealtimeToastSeverity,
 } from "@/lib/chat-preferences";
 import { formatDateTime } from "@/lib/luize-mocks";
 
@@ -562,14 +564,14 @@ const Chat = () => {
     realtimeStatusRef.current = realtimeStatus;
   }, [realtimeStatus]);
 
-  // Live preference: silence realtime connection toasts (per-device, stored in localStorage)
-  const realtimeToastsMutedRef = useRef<boolean>(getRealtimeToastsMuted());
+  // Live preference: realtime toast severity (per-device, stored in localStorage)
+  const realtimeToastSeverityRef = useRef<RealtimeToastSeverity>(getRealtimeToastSeverity());
   useEffect(() => {
     const sync = () => {
-      realtimeToastsMutedRef.current = getRealtimeToastsMuted();
+      realtimeToastSeverityRef.current = getRealtimeToastSeverity();
     };
     const onStorage = (event: StorageEvent) => {
-      if (event.key === REALTIME_TOAST_PREF_KEY) sync();
+      if (event.key === REALTIME_TOAST_SEVERITY_KEY) sync();
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener(CHAT_PREFS_CHANGED_EVENT, sync);
@@ -674,8 +676,8 @@ const Chat = () => {
       // Skip the very first "connected" toast on initial mount to avoid noise
       if (next === "connected" && previous === null) return;
 
-      // Honor user preference to silence realtime connection toasts
-      if (realtimeToastsMutedRef.current) return;
+      // Honor severity preference (none/errors_only/warnings_and_errors/all)
+      if (!shouldShowRealtimeToast(realtimeToastSeverityRef.current, next)) return;
 
       const historyAction = { label: "Ver histórico", onClick: () => openRealtimeHistory() };
 

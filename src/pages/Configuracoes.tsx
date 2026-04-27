@@ -14,9 +14,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import {
   CHAT_PREFS_CHANGED_EVENT,
-  getRealtimeToastsMuted,
-  REALTIME_TOAST_PREF_KEY,
-  setRealtimeToastsMuted,
+  getRealtimeToastSeverity,
+  REALTIME_TOAST_SEVERITY_KEY,
+  setRealtimeToastSeverity,
+  type RealtimeToastSeverity,
 } from "@/lib/chat-preferences";
 
 function validateWebhookUrl(value: string) {
@@ -52,16 +53,16 @@ const Configuracoes = () => {
   const [telegramChatId, setTelegramChatId] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [muteRealtimeToasts, setMuteRealtimeToasts] = useState<boolean>(() => getRealtimeToastsMuted());
+  const [toastSeverity, setToastSeverity] = useState<RealtimeToastSeverity>(() => getRealtimeToastSeverity());
 
-  // Cross-tab + same-tab sync: keep the switch in sync if the preference changes elsewhere
+  // Cross-tab + same-tab sync: keep the select in sync if the preference changes elsewhere
   useEffect(() => {
     const sync = () => {
-      const next = getRealtimeToastsMuted();
-      setMuteRealtimeToasts((current) => (current === next ? current : next));
+      const next = getRealtimeToastSeverity();
+      setToastSeverity((current) => (current === next ? current : next));
     };
     const onStorage = (event: StorageEvent) => {
-      if (event.key === REALTIME_TOAST_PREF_KEY) sync();
+      if (event.key === REALTIME_TOAST_SEVERITY_KEY) sync();
     };
     const onVisibility = () => {
       if (document.visibilityState === "visible") sync();
@@ -217,33 +218,55 @@ const Configuracoes = () => {
             </div>
           )}
 
-          <div className="flex items-start justify-between gap-4 rounded-2xl border border-border bg-panel-elevated p-4">
+          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-panel-elevated p-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex flex-1 items-start gap-3">
               <BellOff className="mt-0.5 size-4 text-muted-foreground" />
               <div className="space-y-1">
-                <label htmlFor="mute-realtime-toasts" className="text-sm font-medium text-foreground">
-                  Silenciar toasts de realtime no chat
+                <label htmlFor="realtime-toast-severity" className="text-sm font-medium text-foreground">
+                  Severidade dos toasts de realtime no chat
                 </label>
                 <p className="text-sm text-muted-foreground">
-                  Esconde apenas as notificações de conexão/reconexão do canal realtime. O indicador no topo do chat, status, contadores e demais alertas continuam ativos.
+                  Escolha quais notificações de conexão você quer receber. O indicador no topo do chat, status, contadores e o histórico continuam ativos independente da escolha.
                 </p>
               </div>
             </div>
-            <Switch
-              id="mute-realtime-toasts"
-              checked={muteRealtimeToasts}
-              onCheckedChange={(checked) => {
-                setMuteRealtimeToasts(checked);
-                setRealtimeToastsMuted(checked);
-                toast({
-                  title: checked ? "Toasts de realtime silenciados" : "Toasts de realtime ativos",
-                  description: checked
-                    ? "Você não receberá mais avisos de conexão/reconexão do canal."
-                    : "Avisos de conexão e reconexão voltarão a aparecer.",
-                });
+            <Select
+              value={toastSeverity}
+              onValueChange={(value) => {
+                const next = value as RealtimeToastSeverity;
+                setToastSeverity(next);
+                setRealtimeToastSeverity(next);
+                const labelMap: Record<RealtimeToastSeverity, { title: string; description: string }> = {
+                  all: {
+                    title: "Mostrando todos os toasts",
+                    description: "Você verá conexão, reconexão, avisos e erros do canal realtime.",
+                  },
+                  warnings_and_errors: {
+                    title: "Apenas avisos e erros",
+                    description: "Você só verá toasts quando o canal cair (warning) ou falhar (error).",
+                  },
+                  errors_only: {
+                    title: "Apenas erros",
+                    description: "Você só receberá toast em caso de falha do canal realtime.",
+                  },
+                  none: {
+                    title: "Toasts de realtime silenciados",
+                    description: "Nenhuma notificação de conexão será exibida.",
+                  },
+                };
+                toast(labelMap[next]);
               }}
-              aria-label="Silenciar toasts de realtime"
-            />
+            >
+              <SelectTrigger id="realtime-toast-severity" className="w-full sm:w-64" aria-label="Severidade dos toasts de realtime">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tudo (info, avisos e erros)</SelectItem>
+                <SelectItem value="warnings_and_errors">Avisos e erros</SelectItem>
+                <SelectItem value="errors_only">Apenas erros</SelectItem>
+                <SelectItem value="none">Silenciar tudo</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Button type="submit" variant="hero" disabled={saving || loading || Boolean(webhookError)}>
