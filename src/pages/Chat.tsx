@@ -27,11 +27,14 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
 import {
+  appendRealtimeEvent,
   CHAT_PREFS_CHANGED_EVENT,
   clearRealtimeEventLog,
+  getEffectiveRealtimeToastSeverity,
   getRealtimeEventLog,
   getRealtimeStatusSnapshot,
   getRealtimeToastSeverity,
+  getRealtimeToastSnoozeUntil,
   getTabId,
   REALTIME_EVENT_LOG_CHANGED_EVENT,
   REALTIME_EVENT_LOG_KEY,
@@ -39,9 +42,11 @@ import {
   REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT,
   REALTIME_STATUS_SNAPSHOT_KEY,
   REALTIME_TOAST_SEVERITY_KEY,
+  REALTIME_TOAST_SNOOZE_UNTIL_KEY,
   setRealtimeEventLog,
   setRealtimeStatusSnapshot,
   setRealtimeToastSeverity,
+  setRealtimeToastSnoozeUntil,
   shouldShowRealtimeToast,
   type RealtimeToastSeverity,
 } from "@/lib/chat-preferences";
