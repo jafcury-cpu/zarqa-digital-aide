@@ -1,6 +1,6 @@
 import { t } from "@/lib/i18n";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { BellRing, Copy, Link2, Save, Send, BellOff, Radio } from "lucide-react";
+import { BellRing, Copy, Link2, Save, Send, BellOff, Radio, Check, X } from "lucide-react";
 import { useAuth } from "@/components/auth/auth-provider";
 import { SectionCard } from "@/components/luize/section-card";
 import { Badge } from "@/components/ui/badge";
@@ -243,65 +243,69 @@ const Configuracoes = () => {
             </div>
           )}
 
-          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-panel-elevated p-4 sm:flex-row sm:items-start sm:justify-between">
-            <div className="flex flex-1 items-start gap-3">
-              <BellOff className="mt-0.5 size-4 text-muted-foreground" />
-              <div className="space-y-1">
-                <label htmlFor="realtime-toast-severity" className="text-sm font-medium text-foreground">
-                  Severidade dos toasts de realtime no chat
-                </label>
-                <p className="text-sm text-muted-foreground">
-                  Escolha quais notificações de conexão você quer receber. O indicador no topo do chat, status, contadores e o histórico continuam ativos independente da escolha.
-                </p>
+          <div className="flex flex-col gap-4 rounded-2xl border border-border bg-panel-elevated p-4">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-1 items-start gap-3">
+                <BellOff className="mt-0.5 size-4 text-muted-foreground" />
+                <div className="space-y-1">
+                  <label htmlFor="realtime-toast-severity" className="text-sm font-medium text-foreground">
+                    Severidade dos toasts de realtime no chat
+                  </label>
+                  <p className="text-sm text-muted-foreground">
+                    Escolha quais notificações de conexão você quer receber. O indicador no topo do chat, status, contadores e o histórico continuam ativos independente da escolha.
+                  </p>
+                </div>
               </div>
-            </div>
-            <Select
-              value={toastSeverity}
-              onValueChange={async (value) => {
-                const next = value as RealtimeToastSeverity;
-                setToastSeverity(next);
-                setRealtimeToastSeverity(next);
-                const labelMap: Record<RealtimeToastSeverity, { title: string; description: string }> = {
-                  all: {
-                    title: "Mostrando todos os toasts",
-                    description: "Você verá conexão, reconexão, avisos e erros do canal realtime.",
-                  },
-                  warnings_and_errors: {
-                    title: "Apenas avisos e erros",
-                    description: "Você só verá toasts quando o canal cair (warning) ou falhar (error).",
-                  },
-                  errors_only: {
-                    title: "Apenas erros",
-                    description: "Você só receberá toast em caso de falha do canal realtime.",
-                  },
-                  none: {
-                    title: "Toasts de realtime silenciados",
-                    description: "Nenhuma notificação de conexão será exibida.",
-                  },
-                };
-                toast(labelMap[next]);
+              <Select
+                value={toastSeverity}
+                onValueChange={async (value) => {
+                  const next = value as RealtimeToastSeverity;
+                  setToastSeverity(next);
+                  setRealtimeToastSeverity(next);
+                  const labelMap: Record<RealtimeToastSeverity, { title: string; description: string }> = {
+                    all: {
+                      title: "Mostrando todos os toasts",
+                      description: "Você verá conexão, reconexão, avisos e erros do canal realtime.",
+                    },
+                    warnings_and_errors: {
+                      title: "Apenas avisos e erros",
+                      description: "Você só verá toasts quando o canal cair (warning) ou falhar (error).",
+                    },
+                    errors_only: {
+                      title: "Apenas erros",
+                      description: "Você só receberá toast em caso de falha do canal realtime.",
+                    },
+                    none: {
+                      title: "Toasts de realtime silenciados",
+                      description: "Nenhuma notificação de conexão será exibida.",
+                    },
+                  };
+                  toast(labelMap[next]);
 
-                // Sync the preference to the cloud so it follows the user across devices.
-                if (user) {
-                  const result = await pushRealtimeToastSeverityToCloud(user.id, next);
-                  if (!result.ok) {
-                    sonnerToast.warning("Preferência salva apenas neste dispositivo", {
-                      description: "Não foi possível sincronizar com a nuvem agora. Tentaremos de novo na próxima alteração.",
-                    });
+                  // Sync the preference to the cloud so it follows the user across devices.
+                  if (user) {
+                    const result = await pushRealtimeToastSeverityToCloud(user.id, next);
+                    if (!result.ok) {
+                      sonnerToast.warning("Preferência salva apenas neste dispositivo", {
+                        description: "Não foi possível sincronizar com a nuvem agora. Tentaremos de novo na próxima alteração.",
+                      });
+                    }
                   }
-                }
-              }}
-            >
-              <SelectTrigger id="realtime-toast-severity" className="w-full sm:w-64" aria-label="Severidade dos toasts de realtime">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tudo (info, avisos e erros)</SelectItem>
-                <SelectItem value="warnings_and_errors">Avisos e erros</SelectItem>
-                <SelectItem value="errors_only">Apenas erros</SelectItem>
-                <SelectItem value="none">Silenciar tudo</SelectItem>
-              </SelectContent>
-            </Select>
+                }}
+              >
+                <SelectTrigger id="realtime-toast-severity" className="w-full sm:w-64" aria-label="Severidade dos toasts de realtime">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tudo (info, avisos e erros)</SelectItem>
+                  <SelectItem value="warnings_and_errors">Avisos e erros</SelectItem>
+                  <SelectItem value="errors_only">Apenas erros</SelectItem>
+                  <SelectItem value="none">Silenciar tudo</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <SeverityMatrix severity={toastSeverity} />
           </div>
 
           <RealtimeToastSimulator severity={toastSeverity} />
@@ -363,6 +367,77 @@ const SEVERITY_HINTS: Record<RealtimeToastSeverity, string> = {
   errors_only: "Você deve ver apenas 1 toast: falha (error).",
   none: "Nenhum toast deve aparecer — a categoria está silenciada.",
 };
+
+const TRANSITION_ROWS: Array<{
+  status: SimulatedStatus;
+  label: string;
+  toastKind: "info" | "success" | "warning" | "error";
+  description: string;
+}> = [
+  { status: "connecting", label: "Conectando", toastKind: "info", description: "Tentando estabelecer ou retomar o canal" },
+  { status: "connected", label: "Reconectado", toastKind: "success", description: "Canal voltou a ficar ativo" },
+  { status: "disconnected", label: "Desconectado", toastKind: "warning", description: "Canal caiu de forma inesperada" },
+  { status: "error", label: "Falha", toastKind: "error", description: "Erro persistente no canal realtime" },
+];
+
+const TOAST_KIND_BADGE: Record<"info" | "success" | "warning" | "error", string> = {
+  info: "bg-accent-blue/15 text-accent-blue",
+  success: "bg-accent-green/15 text-accent-green",
+  warning: "bg-amber-500/15 text-amber-400",
+  error: "bg-destructive/15 text-destructive",
+};
+
+function SeverityMatrix({ severity }: { severity: RealtimeToastSeverity }) {
+  const visibleCount = TRANSITION_ROWS.filter((row) => shouldShowRealtimeToast(severity, row.status)).length;
+  return (
+    <div className="rounded-xl border border-border/70 bg-background/40 p-3">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+          O que aparece com a severidade selecionada
+        </p>
+        <span className="text-xs text-muted-foreground">
+          {visibleCount} de {TRANSITION_ROWS.length} transições
+        </span>
+      </div>
+      <ul className="divide-y divide-border/60">
+        {TRANSITION_ROWS.map((row) => {
+          const visible = shouldShowRealtimeToast(severity, row.status);
+          return (
+            <li
+              key={row.status}
+              className="flex items-center justify-between gap-3 py-2 text-sm"
+            >
+              <div className="flex min-w-0 items-center gap-2">
+                {visible ? (
+                  <Check className="size-4 shrink-0 text-accent-green" aria-label="Mostrado" />
+                ) : (
+                  <X className="size-4 shrink-0 text-muted-foreground" aria-label="Oculto" />
+                )}
+                <span
+                  className={cn(
+                    "rounded-md px-2 py-0.5 text-xs font-medium",
+                    TOAST_KIND_BADGE[row.toastKind],
+                  )}
+                >
+                  {row.label}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">{row.description}</span>
+              </div>
+              <span
+                className={cn(
+                  "text-xs font-medium",
+                  visible ? "text-foreground" : "text-muted-foreground/70 line-through",
+                )}
+              >
+                {visible ? "Mostrado" : "Oculto"}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
 
 function RealtimeToastSimulator({ severity }: { severity: RealtimeToastSeverity }) {
   const [running, setRunning] = useState(false);
