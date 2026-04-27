@@ -247,7 +247,7 @@ function RealtimeHistoryPopover({
 
   const filtersActive = statusFilter.size > 0 || dateFilter !== undefined;
   // Status chips — keep meaningful transitions, hide "connecting" intermediate to reduce clutter
-  const filterableStatuses: RealtimeStatus[] = ["connected", "disconnected", "error", "paused", "connecting"];
+  const filterableStatuses: RealtimeEventStatus[] = ["connected", "disconnected", "error", "paused", "connecting", "settings"];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
