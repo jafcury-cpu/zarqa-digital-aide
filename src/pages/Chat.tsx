@@ -532,7 +532,7 @@ const Chat = () => {
     setEventLog((current) => {
       const last = current[current.length - 1];
       if (last && last.status === status && last.reason === reason) return current;
-      const merged = [...current, { at: Date.now(), status, reason }];
+      const merged = [...current, { at: Date.now(), status, reason, tabId: getTabId() }];
       const next = merged.length > REALTIME_EVENT_LOG_MAX ? merged.slice(merged.length - REALTIME_EVENT_LOG_MAX) : merged;
       setRealtimeEventLog(next);
       return next;
