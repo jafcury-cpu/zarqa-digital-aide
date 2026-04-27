@@ -659,9 +659,11 @@ const Chat = () => {
     if (!user) return;
     if (realtimePaused) {
       // Pause: skip subscribing entirely; cleanup runs on next pause toggle / unmount
+      const reason = "Sincronização pausada manualmente";
       setRealtimeStatus("paused");
-      setRealtimeReason("Sincronização pausada manualmente");
+      setRealtimeReason(reason);
       setRealtimeLastChangeAt(new Date());
+      setRealtimeStatusSnapshot({ status: "paused", reason, at: Date.now(), tabId: getTabId() });
       return;
     }
 
