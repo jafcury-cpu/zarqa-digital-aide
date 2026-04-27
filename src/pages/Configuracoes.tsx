@@ -272,6 +272,8 @@ const Configuracoes = () => {
             </Select>
           </div>
 
+          <RealtimeToastSimulator severity={toastSeverity} />
+
           <Button type="submit" variant="hero" disabled={saving || loading || Boolean(webhookError)}>
             <Save className="size-4" />
             {saving ? "Salvando..." : "Salvar configurações"}
