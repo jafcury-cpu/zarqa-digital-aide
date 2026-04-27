@@ -114,7 +114,7 @@ export type PersistedRealtimeStatusSnapshot = {
   tabId: string;
 };
 
-const VALID_STATUSES: PersistedRealtimeStatus[] = ["connecting", "connected", "disconnected", "error", "paused"];
+const VALID_STATUSES: PersistedRealtimeStatus[] = ["connecting", "connected", "disconnected", "error", "paused", "settings"];
 
 function isPersistedEvent(value: unknown): value is PersistedRealtimeEvent {
   if (!value || typeof value !== "object") return false;
