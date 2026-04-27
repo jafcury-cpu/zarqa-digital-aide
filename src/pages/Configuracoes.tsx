@@ -12,12 +12,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { toast as sonnerToast } from "sonner";
 import {
   CHAT_PREFS_CHANGED_EVENT,
   getRealtimeToastSeverity,
   REALTIME_TOAST_SEVERITY_KEY,
   setRealtimeToastSeverity,
+  shouldShowRealtimeToast,
   type RealtimeToastSeverity,
+  type PersistedRealtimeStatus,
 } from "@/lib/chat-preferences";
 
 function validateWebhookUrl(value: string) {
