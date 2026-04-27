@@ -98,7 +98,11 @@ const Configuracoes = () => {
 
     const loadSettings = async () => {
       setLoading(true);
-      const { data, error } = await supabase.from("settings").select("webhook_url, timezone, telegram_bot_token, telegram_chat_id").eq("user_id", user.id).maybeSingle();
+      const { data, error } = await supabase
+        .from("settings")
+        .select("webhook_url, timezone, telegram_bot_token, telegram_chat_id, realtime_toast_severity")
+        .eq("user_id", user.id)
+        .maybeSingle();
       if (error) {
         toast({ variant: "destructive", title: "Falha ao carregar configurações", description: error.message });
       } else if (data) {
@@ -106,6 +110,20 @@ const Configuracoes = () => {
         setTimezone(data.timezone ?? "America/Sao_Paulo");
         setTelegramBotToken(data.telegram_bot_token ?? "");
         setTelegramChatId(data.telegram_chat_id ?? "");
+        // Adopt cloud severity if it differs from the local cache, so the
+        // preference follows the user across devices.
+        const cloudSeverity = (data as { realtime_toast_severity?: unknown }).realtime_toast_severity;
+        if (
+          typeof cloudSeverity === "string" &&
+          (["all", "warnings_and_errors", "errors_only", "none"] as const).includes(
+            cloudSeverity as RealtimeToastSeverity,
+          ) &&
+          cloudSeverity !== getRealtimeToastSeverity()
+        ) {
+          const next = cloudSeverity as RealtimeToastSeverity;
+          setRealtimeToastSeverity(next); // updates cache + emits CHAT_PREFS_CHANGED_EVENT
+          setToastSeverity(next);
+        }
       }
       setLoading(false);
     };
