@@ -258,8 +258,9 @@ Deno.serve(async (req) => {
     });
 
     if (!response.ok) {
-      const errorBody = await response.text();
-      throw new Error(`Webhook retornou ${response.status}: ${errorBody || "sem detalhes"}`);
+      const errorBody = await response.text().catch(() => "");
+      console.error("chat-webhook upstream error:", response.status, errorBody);
+      throw new Error(`UPSTREAM_${response.status}`);
     }
 
     const reply = (await extractReply(response)).trim();
@@ -268,10 +269,14 @@ Deno.serve(async (req) => {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Falha ao enviar mensagem ao webhook.";
-    const status = error instanceof DOMException && error.name === "TimeoutError" ? 504 : 500;
+    console.error("chat-webhook error:", error);
+    const isTimeout = error instanceof DOMException && error.name === "TimeoutError";
+    const status = isTimeout ? 504 : 500;
+    const safeMessage = isTimeout
+      ? "Tempo esgotado ao contactar o webhook."
+      : "Falha ao processar a mensagem. Tente novamente.";
 
-    return new Response(JSON.stringify({ error: message }), {
+    return new Response(JSON.stringify({ error: safeMessage }), {
       status,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
