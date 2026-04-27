@@ -201,7 +201,7 @@ function RealtimeHistoryPopover({
   onClearLog: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [statusFilter, setStatusFilter] = useState<Set<RealtimeStatus>>(new Set());
+  const [statusFilter, setStatusFilter] = useState<Set<RealtimeEventStatus>>(new Set());
   const [dateFilter, setDateFilter] = useState<Date | undefined>(undefined);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
