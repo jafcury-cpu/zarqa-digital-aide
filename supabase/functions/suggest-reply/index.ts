@@ -12,26 +12,41 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // Try to get user from auth header, fallback to service role for testing
-    let userId: string | null = null;
+    // Require authentication
     const authHeader = req.headers.get("Authorization");
-    if (authHeader) {
-      const anonClient = createClient(
-        supabaseUrl,
-        Deno.env.get("SUPABASE_ANON_KEY")!
-      );
-      const {
-        data: { user },
-      } = await anonClient.auth.getUser(authHeader.replace("Bearer ", ""));
-      userId = user?.id ?? null;
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const anonKey =
+      Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
+      Deno.env.get("SUPABASE_ANON_KEY")!;
+
+    // User-scoped client — RLS will enforce ownership of message/reply rows
+    const supabase = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+
+    if (userError || !user?.id) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const userId = user.id;
+
     const { message_id } = await req.json();
-    if (!message_id) {
+    if (!message_id || typeof message_id !== "string") {
       return new Response(
         JSON.stringify({ error: "message_id is required" }),
         {
@@ -41,13 +56,12 @@ serve(async (req) => {
       );
     }
 
-    // Fetch the message (filter by user if authenticated)
-    let query = supabase
+    // RLS restricts this to the authenticated user's own messages
+    const { data: message, error: msgError } = await supabase
       .from("communication_messages")
       .select("*")
-      .eq("id", message_id);
-    if (userId) query = query.eq("user_id", userId);
-    const { data: message, error: msgError } = await query.single();
+      .eq("id", message_id)
+      .single();
 
     if (msgError || !message) {
       return new Response(JSON.stringify({ error: "Message not found" }), {
@@ -120,18 +134,21 @@ Sugira uma resposta adequada:`;
           { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      throw new Error(`AI gateway error: ${status}`);
+      console.error("suggest-reply AI gateway error:", status);
+      return new Response(
+        JSON.stringify({ error: "Falha ao gerar sugestão." }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const aiData = await aiResponse.json();
     const suggestion =
       aiData.choices?.[0]?.message?.content || "Não foi possível gerar sugestão.";
 
-    // Save the suggestion
     const { data: reply, error: replyError } = await supabase
       .from("communication_replies")
       .insert({
-        user_id: userId || message.user_id,
+        user_id: userId,
         message_id: message.id,
         ai_suggestion: suggestion,
         status: "suggested",
@@ -139,7 +156,13 @@ Sugira uma resposta adequada:`;
       .select()
       .single();
 
-    if (replyError) throw replyError;
+    if (replyError) {
+      console.error("suggest-reply insert error:", replyError);
+      return new Response(
+        JSON.stringify({ error: "Falha ao salvar sugestão." }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     return new Response(JSON.stringify({ reply }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -147,9 +170,7 @@ Sugira uma resposta adequada:`;
   } catch (e) {
     console.error("suggest-reply error:", e);
     return new Response(
-      JSON.stringify({
-        error: e instanceof Error ? e.message : "Unknown error",
-      }),
+      JSON.stringify({ error: "Internal server error" }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
