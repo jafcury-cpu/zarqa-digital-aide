@@ -1,7 +1,7 @@
 import { t } from "@/lib/i18n";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { CalendarIcon, ChevronUp, Download, FilterX, History, Pause, Play, RefreshCw, SendHorizontal, Trash2, Radio } from "lucide-react";
+import { BellOff, BellRing, CalendarIcon, ChevronUp, Download, FilterX, History, Pause, Play, RefreshCw, SendHorizontal, Trash2, Radio } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Toggle } from "@/components/ui/toggle";
@@ -27,11 +27,14 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import { supabase } from "@/integrations/supabase/client";
 import { toast as sonnerToast } from "sonner";
 import {
+  appendRealtimeEvent,
   CHAT_PREFS_CHANGED_EVENT,
   clearRealtimeEventLog,
+  getEffectiveRealtimeToastSeverity,
   getRealtimeEventLog,
   getRealtimeStatusSnapshot,
   getRealtimeToastSeverity,
+  getRealtimeToastSnoozeUntil,
   getTabId,
   REALTIME_EVENT_LOG_CHANGED_EVENT,
   REALTIME_EVENT_LOG_KEY,
@@ -39,9 +42,11 @@ import {
   REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT,
   REALTIME_STATUS_SNAPSHOT_KEY,
   REALTIME_TOAST_SEVERITY_KEY,
+  REALTIME_TOAST_SNOOZE_UNTIL_KEY,
   setRealtimeEventLog,
   setRealtimeStatusSnapshot,
   setRealtimeToastSeverity,
+  setRealtimeToastSnoozeUntil,
   shouldShowRealtimeToast,
   type RealtimeToastSeverity,
 } from "@/lib/chat-preferences";
@@ -411,6 +416,57 @@ function RealtimeHistoryPopover({
   );
 }
 
+function SnoozeToastsButton({
+  snoozedUntil,
+  onChange,
+}: {
+  snoozedUntil: number | null;
+  onChange: (next: number | null) => void;
+}) {
+  // Re-render every 30s so the countdown stays accurate without listener spam.
+  const [, setTick] = useState(0);
+  useEffect(() => {
+    if (snoozedUntil === null) return;
+    const id = window.setInterval(() => setTick((n) => n + 1), 30_000);
+    return () => window.clearInterval(id);
+  }, [snoozedUntil]);
+
+  const remainingMs = snoozedUntil ? Math.max(0, snoozedUntil - Date.now()) : 0;
+  const minutesLeft = Math.ceil(remainingMs / 60_000);
+  const isSnoozed = snoozedUntil !== null && remainingMs > 0;
+
+  const handleClick = () => {
+    if (isSnoozed) {
+      onChange(null);
+    } else {
+      onChange(Date.now() + 60 * 60 * 1000);
+    }
+  };
+
+  return (
+    <Button
+      type="button"
+      variant={isSnoozed ? "secondary" : "outline"}
+      size="sm"
+      onClick={handleClick}
+      className="ml-1 h-7 gap-1.5 px-2 text-[11px]"
+      aria-label={
+        isSnoozed
+          ? `Reativar toasts de realtime (silenciados por mais ${minutesLeft} min)`
+          : "Silenciar toasts de realtime por 1 hora"
+      }
+      title={
+        isSnoozed
+          ? `Toasts silenciados — restam ${minutesLeft} min. Clique para reativar.`
+          : "Silencia os toasts de realtime por 1 hora sem mexer na severidade salva."
+      }
+    >
+      {isSnoozed ? <BellOff className="size-3" /> : <BellRing className="size-3" />}
+      {isSnoozed ? `Silenciado · ${minutesLeft}m` : "Silenciar 1h"}
+    </Button>
+  );
+}
+
 function RealtimeIndicator({
   status,
   insertCount,
@@ -423,6 +479,8 @@ function RealtimeIndicator({
   paused,
   eventLog,
   onClearLog,
+  snoozedUntil,
+  onSnoozeChange,
 }: {
   status: RealtimeStatus;
   insertCount: number;
@@ -435,6 +493,8 @@ function RealtimeIndicator({
   paused: boolean;
   eventLog: RealtimeEvent[];
   onClearLog: () => void;
+  snoozedUntil: number | null;
+  onSnoozeChange: (next: number | null) => void;
 }) {
   const meta = REALTIME_BADGE[status];
   const total = insertCount + deleteCount;
@@ -461,6 +521,7 @@ function RealtimeIndicator({
               {reconnecting ? "Reconectando..." : "Reconectar agora"}
             </Button>
           ) : null}
+          <SnoozeToastsButton snoozedUntil={snoozedUntil} onChange={onSnoozeChange} />
           <RealtimeHistoryPopover eventLog={eventLog} onClearLog={onClearLog} />
         </div>
         <div className="flex items-center gap-2">
@@ -625,14 +686,18 @@ const Chat = () => {
     realtimeStatusRef.current = realtimeStatus;
   }, [realtimeStatus]);
 
-  // Live preference: realtime toast severity (per-device, stored in localStorage)
-  const realtimeToastSeverityRef = useRef<RealtimeToastSeverity>(getRealtimeToastSeverity());
+  // Live preference: realtime toast severity (per-device, stored in localStorage).
+  // We track the *effective* severity so an active snooze automatically silences toasts
+  // without us having to thread an extra check through every emit site.
+  const realtimeToastSeverityRef = useRef<RealtimeToastSeverity>(getEffectiveRealtimeToastSeverity());
+  const [snoozedUntil, setSnoozedUntil] = useState<number | null>(() => getRealtimeToastSnoozeUntil());
   useEffect(() => {
     const sync = () => {
-      realtimeToastSeverityRef.current = getRealtimeToastSeverity();
+      realtimeToastSeverityRef.current = getEffectiveRealtimeToastSeverity();
+      setSnoozedUntil(getRealtimeToastSnoozeUntil());
     };
     const onStorage = (event: StorageEvent) => {
-      if (event.key === REALTIME_TOAST_SEVERITY_KEY) sync();
+      if (event.key === REALTIME_TOAST_SEVERITY_KEY || event.key === REALTIME_TOAST_SNOOZE_UNTIL_KEY) sync();
     };
     window.addEventListener("storage", onStorage);
     window.addEventListener(CHAT_PREFS_CHANGED_EVENT, sync);
@@ -641,6 +706,21 @@ const Chat = () => {
       window.removeEventListener(CHAT_PREFS_CHANGED_EVENT, sync);
     };
   }, []);
+
+  // Auto-clear the snooze the moment it expires, so the UI updates and the next
+  // legitimate toast can fire without requiring a tab switch / focus event.
+  useEffect(() => {
+    if (snoozedUntil === null) return;
+    const remaining = snoozedUntil - Date.now();
+    if (remaining <= 0) {
+      setRealtimeToastSnoozeUntil(null);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      setRealtimeToastSnoozeUntil(null); // emits CHAT_PREFS_CHANGED_EVENT → ref + state sync
+    }, remaining + 50);
+    return () => window.clearTimeout(timer);
+  }, [snoozedUntil]);
 
   // One-shot: hydrate the severity preference from the cloud so it follows the user
   // across devices, even if they never opened the Configurações page on this device.
@@ -1247,6 +1327,31 @@ const Chat = () => {
             paused={realtimePaused}
             eventLog={eventLog}
             onClearLog={handleClearEventLog}
+            snoozedUntil={snoozedUntil}
+            onSnoozeChange={(next) => {
+              setRealtimeToastSnoozeUntil(next);
+              setSnoozedUntil(next);
+              if (next === null) {
+                appendRealtimeEvent({
+                  status: "settings",
+                  reason: "Toasts de realtime reativados",
+                  tabId: getTabId(),
+                });
+                sonnerToast.success("Toasts reativados", {
+                  description: "Você voltará a receber notificações de conexão segundo a severidade configurada.",
+                });
+              } else {
+                const minutes = Math.round((next - Date.now()) / 60_000);
+                appendRealtimeEvent({
+                  status: "settings",
+                  reason: `Toasts silenciados por ${minutes} min (até ${new Date(next).toLocaleTimeString("pt-BR")})`,
+                  tabId: getTabId(),
+                });
+                sonnerToast.message("Toasts silenciados por 1h", {
+                  description: `Você não receberá toasts de realtime até ${new Date(next).toLocaleTimeString("pt-BR")}.`,
+                });
+              }
+            }}
           />
           <div ref={scrollRef} className="scrollbar-thin flex-1 space-y-4 overflow-y-auto p-4 md:p-5">
             {hasMore && !loading ? (

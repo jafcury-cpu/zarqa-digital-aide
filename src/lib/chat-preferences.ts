@@ -9,6 +9,7 @@ export const REALTIME_EVENT_LOG_CHANGED_EVENT = "luize:chat-realtime-log-changed
 export const REALTIME_EVENT_LOG_MAX = 10;
 export const REALTIME_STATUS_SNAPSHOT_KEY = "luize.chat.realtimeStatusSnapshot";
 export const REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT = "luize:chat-realtime-status-changed";
+export const REALTIME_TOAST_SNOOZE_UNTIL_KEY = "luize.chat.realtimeToastSnoozeUntil";
 
 // Per-tab id used to detect cross-tab transitions vs. local ones.
 let TAB_ID: string | null = null;
@@ -68,6 +69,51 @@ export function setRealtimeToastSeverity(severity: RealtimeToastSeverity): void 
   } catch {
     /* ignore quota / privacy mode errors */
   }
+}
+
+/**
+ * Temporary "snooze" of realtime toasts: returns the timestamp (ms epoch) until
+ * which toasts should stay silenced regardless of the severity preference.
+ * Returns null if no snooze is active or it has already expired.
+ */
+export function getRealtimeToastSnoozeUntil(): number | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(REALTIME_TOAST_SNOOZE_UNTIL_KEY);
+    if (!raw) return null;
+    const ts = Number.parseInt(raw, 10);
+    if (!Number.isFinite(ts)) return null;
+    if (ts <= Date.now()) {
+      window.localStorage.removeItem(REALTIME_TOAST_SNOOZE_UNTIL_KEY);
+      return null;
+    }
+    return ts;
+  } catch {
+    return null;
+  }
+}
+
+export function setRealtimeToastSnoozeUntil(timestamp: number | null): void {
+  if (typeof window === "undefined") return;
+  try {
+    if (timestamp === null || timestamp <= Date.now()) {
+      window.localStorage.removeItem(REALTIME_TOAST_SNOOZE_UNTIL_KEY);
+    } else {
+      window.localStorage.setItem(REALTIME_TOAST_SNOOZE_UNTIL_KEY, String(timestamp));
+    }
+    window.dispatchEvent(new CustomEvent(CHAT_PREFS_CHANGED_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
+
+/**
+ * Returns the *effective* severity, accounting for an active snooze. If the
+ * snooze window is in the future, the user's severity is overridden to "none".
+ */
+export function getEffectiveRealtimeToastSeverity(): RealtimeToastSeverity {
+  if (getRealtimeToastSnoozeUntil() !== null) return "none";
+  return getRealtimeToastSeverity();
 }
 
 /**
