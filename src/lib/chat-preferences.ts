@@ -162,7 +162,31 @@ export function clearRealtimeEventLog(): void {
   }
 }
 
-function isSnapshot(value: unknown): value is PersistedRealtimeStatusSnapshot {
+/**
+ * Append a single event to the persisted realtime log. De-duplicates back-to-back
+ * identical (status + reason) entries, trims to REALTIME_EVENT_LOG_MAX, and
+ * notifies listeners (same-tab via custom event, cross-tab via storage).
+ *
+ * Use this from any module that wants to record a notable change in the chat's
+ * realtime history (e.g. preference changes from the Settings page).
+ */
+export function appendRealtimeEvent(event: {
+  status: PersistedRealtimeStatus;
+  reason: string;
+  at?: number;
+  tabId?: string;
+}): void {
+  const current = getRealtimeEventLog();
+  const last = current[current.length - 1];
+  if (last && last.status === event.status && last.reason === event.reason) return;
+  const next: PersistedRealtimeEvent = {
+    at: event.at ?? Date.now(),
+    status: event.status,
+    reason: event.reason,
+    tabId: event.tabId,
+  };
+  setRealtimeEventLog([...current, next]);
+}
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
   return (
