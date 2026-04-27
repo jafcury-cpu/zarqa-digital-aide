@@ -153,7 +153,40 @@ export function clearRealtimeEventLog(): void {
   }
 }
 
-export function getRealtimeToastsMuted(): boolean {
+function isSnapshot(value: unknown): value is PersistedRealtimeStatusSnapshot {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.status === "string" &&
+    VALID_STATUSES.includes(v.status as PersistedRealtimeStatus) &&
+    typeof v.reason === "string" &&
+    typeof v.at === "number" &&
+    Number.isFinite(v.at) &&
+    typeof v.tabId === "string"
+  );
+}
+
+export function getRealtimeStatusSnapshot(): PersistedRealtimeStatusSnapshot | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(REALTIME_STATUS_SNAPSHOT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    return isSnapshot(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setRealtimeStatusSnapshot(snapshot: PersistedRealtimeStatusSnapshot): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(REALTIME_STATUS_SNAPSHOT_KEY, JSON.stringify(snapshot));
+    window.dispatchEvent(new CustomEvent(REALTIME_STATUS_SNAPSHOT_CHANGED_EVENT));
+  } catch {
+    /* ignore */
+  }
+}
   if (typeof window === "undefined") return false;
   try {
     return window.localStorage.getItem(REALTIME_TOAST_PREF_KEY) === "1";
