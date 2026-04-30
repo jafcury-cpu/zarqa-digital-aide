@@ -52,6 +52,14 @@ import {
 } from "@/lib/chat-preferences";
 import { fetchRealtimeToastSeverityFromCloud } from "@/lib/realtime-toast-severity-cloud";
 import { formatDateTime } from "@/lib/luize-mocks";
+import {
+  clearWebhookCallLog,
+  getWebhookCallLog,
+  recordWebhookCall,
+  WEBHOOK_LOG_CHANGED_EVENT,
+  type WebhookCallEntry,
+} from "@/lib/webhook-call-log";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
 const PAGE_SIZE = 200;
 
@@ -562,6 +570,118 @@ function RealtimeIndicator({
   );
 }
 
+function WebhookInspector() {
+  const [entries, setEntries] = useState<WebhookCallEntry[]>(() => getWebhookCallLog());
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = () => setEntries(getWebhookCallLog());
+    window.addEventListener(WEBHOOK_LOG_CHANGED_EVENT, handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener(WEBHOOK_LOG_CHANGED_EVENT, handler);
+      window.removeEventListener("storage", handler);
+    };
+  }, []);
+
+  const handleClear = () => {
+    clearWebhookCallLog();
+    setEntries([]);
+  };
+
+  const fmtJson = (value: unknown) => {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  };
+
+  return (
+    <SectionCard
+      title="Inspetor do webhook"
+      description="Últimas requisições enviadas para o backend do chat (somente nesta sessão)"
+      eyebrow="DIAGNÓSTICO"
+      action={
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="font-mono text-[10px]">
+            {entries.length} req
+          </Badge>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleClear}
+            disabled={entries.length === 0}
+            className="h-8 gap-1.5"
+          >
+            <Trash2 className="size-3.5" />
+            Limpar
+          </Button>
+        </div>
+      }
+    >
+      {entries.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border/60 bg-panel/50 p-6 text-center text-sm text-muted-foreground">
+          Nenhuma chamada registrada ainda. Envie uma mensagem ou clique em "Testar" na aba Conversa.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {entries.map((entry) => {
+            const isOpen = expanded === entry.id;
+            return (
+              <li key={entry.id} className="rounded-xl border border-border bg-panel-elevated">
+                <button
+                  type="button"
+                  onClick={() => setExpanded(isOpen ? null : entry.id)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-panel"
+                >
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Badge variant={entry.status === "success" ? "success" : "destructive"}>
+                      {entry.httpStatus ?? (entry.status === "success" ? "OK" : "ERR")}
+                    </Badge>
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      {entry.mode}
+                    </Badge>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {entry.durationMs} ms
+                    </span>
+                    {entry.errorMessage ? (
+                      <span className="truncate text-xs text-destructive">{entry.errorMessage}</span>
+                    ) : null}
+                  </div>
+                  <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                    {new Date(entry.at).toLocaleString("pt-BR", {
+                      timeZone: "America/Sao_Paulo",
+                      hour12: false,
+                    })}
+                  </span>
+                </button>
+                {isOpen ? (
+                  <div className="space-y-3 border-t border-border px-4 py-3">
+                    <div>
+                      <p className="mb-1 text-kicker">Request payload</p>
+                      <pre className="max-h-64 overflow-auto rounded-md border border-border/60 bg-background/60 p-3 text-[11px] leading-relaxed text-muted-foreground">
+                        {fmtJson(entry.request)}
+                      </pre>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-kicker">Response</p>
+                      <pre className="max-h-64 overflow-auto rounded-md border border-border/60 bg-background/60 p-3 text-[11px] leading-relaxed text-muted-foreground">
+                        {fmtJson(entry.response)}
+                      </pre>
+                    </div>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </SectionCard>
+  );
+}
+
 const Chat = () => {
   useDocumentTitle("Chat");
   const { user } = useAuth();
@@ -744,24 +864,58 @@ const Chat = () => {
   const checkWebhook = useCallback(async () => {
     setStatus("checking");
     setStatusDetail(null);
+    const startedAt = performance.now();
+    const requestBody = { mode: "ping" as const };
     try {
       const { data, error } = await supabase.functions.invoke("chat-webhook", {
-        body: { mode: "ping" },
+        body: requestBody,
       });
+      const duration = Math.round(performance.now() - startedAt);
       if (error) {
         setStatus("offline");
         setStatusDetail(getFriendlyWebhookError(error));
         setLatencyMs(null);
+        recordWebhookCall({
+          at: Date.now(),
+          mode: "ping",
+          durationMs: duration,
+          status: "error",
+          httpStatus: (error as { context?: { status?: number } })?.context?.status ?? null,
+          errorMessage: error.message,
+          request: requestBody,
+          response: data ?? null,
+        });
         return;
       }
       const next = (data?.status as WebhookStatus | undefined) ?? "offline";
       setStatus(next);
       setStatusDetail(typeof data?.message === "string" ? data.message : null);
       setLatencyMs(typeof data?.latencyMs === "number" ? data.latencyMs : null);
+      recordWebhookCall({
+        at: Date.now(),
+        mode: "ping",
+        durationMs: duration,
+        status: "success",
+        httpStatus: 200,
+        errorMessage: null,
+        request: requestBody,
+        response: data ?? null,
+      });
     } catch (error) {
+      const duration = Math.round(performance.now() - startedAt);
       setStatus("offline");
       setStatusDetail(getFriendlyWebhookError(error));
       setLatencyMs(null);
+      recordWebhookCall({
+        at: Date.now(),
+        mode: "ping",
+        durationMs: duration,
+        status: "error",
+        httpStatus: null,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        request: requestBody,
+        response: null,
+      });
     } finally {
       setLastCheckedAt(new Date());
     }
@@ -1183,17 +1337,41 @@ const Chat = () => {
 
       if (webhookUrl) {
         const history = [...messages, userMessage as MessageRow].map((message) => ({ role: message.role, content: message.content }));
+        const requestBody = {
+          message: content,
+          source: "luize-chat",
+          history,
+        };
+        const startedAt = performance.now();
         const { data, error } = await supabase.functions.invoke("chat-webhook", {
-          body: {
-            message: content,
-            source: "luize-chat",
-            history,
-          },
+          body: requestBody,
         });
+        const duration = Math.round(performance.now() - startedAt);
 
         if (error) {
+          recordWebhookCall({
+            at: Date.now(),
+            mode: "message",
+            durationMs: duration,
+            status: "error",
+            httpStatus: (error as { context?: { status?: number } })?.context?.status ?? null,
+            errorMessage: error.message,
+            request: requestBody,
+            response: data ?? null,
+          });
           throw new Error(error.message || "Falha ao acionar o backend do chat.");
         }
+
+        recordWebhookCall({
+          at: Date.now(),
+          mode: "message",
+          durationMs: duration,
+          status: "success",
+          httpStatus: 200,
+          errorMessage: null,
+          request: requestBody,
+          response: data ?? null,
+        });
 
         reply = typeof data?.reply === "string" ? data.reply.trim() || reply : reply;
       }
@@ -1228,7 +1406,13 @@ const Chat = () => {
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1.6fr_0.7fr]">
+    <Tabs defaultValue="conversa" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="conversa">Conversa</TabsTrigger>
+        <TabsTrigger value="webhook">Webhook</TabsTrigger>
+      </TabsList>
+      <TabsContent value="conversa" className="m-0">
+        <div className="grid gap-4 xl:grid-cols-[1.6fr_0.7fr]">
       <SectionCard
         title="Canal direto com a Luize"
         description="Interface de chat persistida no banco e pronta para webhook externo"
@@ -1463,6 +1647,11 @@ const Chat = () => {
         </div>
       </SectionCard>
     </div>
+      </TabsContent>
+      <TabsContent value="webhook" className="m-0">
+        <WebhookInspector />
+      </TabsContent>
+    </Tabs>
   );
 };
 
