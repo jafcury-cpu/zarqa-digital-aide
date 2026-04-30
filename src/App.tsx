@@ -27,6 +27,7 @@ const Erros = lazy(() => import("./pages/Erros.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const I18nPreview = lazy(() => import("./pages/I18nPreview.tsx"));
 const Status = lazy(() => import("./pages/Status.tsx"));
+const PostLogin = lazy(() => import("./pages/PostLogin.tsx"));
 
 const queryClient = new QueryClient();
 
@@ -57,6 +58,14 @@ const App = () => (
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/i18n" element={<I18nPreview />} />
                   <Route path="/status" element={<Status />} />
+                  <Route
+                    path="/post-login"
+                    element={
+                      <ProtectedRoute>
+                        <PostLogin />
+                      </ProtectedRoute>
+                    }
+                  />
                   <Route
                     element={
                       <ProtectedRoute>
