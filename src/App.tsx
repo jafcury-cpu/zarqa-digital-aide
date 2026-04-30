@@ -40,47 +40,49 @@ const routeFallback = (
 );
 
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
-      <AuthProvider>
-        <TooltipProvider>
-          <Toaster />
-          <Sonner />
-          <DebugOverlay />
-          <BrowserRouter>
-            <Suspense fallback={routeFallback}>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/index" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
-                <Route path="/i18n" element={<I18nPreview />} />
-                <Route path="/status" element={<Status />} />
-                <Route
-                  element={
-                    <ProtectedRoute>
-                      <LuizeAppLayout />
-                    </ProtectedRoute>
-                  }
-                >
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/chat" element={<Chat />} />
-                  <Route path="/financeiro" element={<Financeiro />} />
-                  <Route path="/saude" element={<Saude />} />
-                  <Route path="/documentos" element={<Documentos />} />
-                  <Route path="/contatos" element={<Contatos />} />
-                  <Route path="/comunicacoes" element={<Comunicacoes />} />
-                  <Route path="/configuracoes" element={<Configuracoes />} />
-                  <Route path="/erros" element={<Erros />} />
-                </Route>
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
-          </BrowserRouter>
-        </TooltipProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
+  <RuntimeErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="dark" forcedTheme="dark" enableSystem={false}>
+        <AuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <DebugOverlay />
+            <BrowserRouter>
+              <Suspense fallback={routeFallback}>
+                <Routes>
+                  <Route path="/" element={<Index />} />
+                  <Route path="/index" element={<Index />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/i18n" element={<I18nPreview />} />
+                  <Route path="/status" element={<Status />} />
+                  <Route
+                    element={
+                      <ProtectedRoute>
+                        <LuizeAppLayout />
+                      </ProtectedRoute>
+                    }
+                  >
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/chat" element={<Chat />} />
+                    <Route path="/financeiro" element={<Financeiro />} />
+                    <Route path="/saude" element={<Saude />} />
+                    <Route path="/documentos" element={<Documentos />} />
+                    <Route path="/contatos" element={<Contatos />} />
+                    <Route path="/comunicacoes" element={<Comunicacoes />} />
+                    <Route path="/configuracoes" element={<Configuracoes />} />
+                    <Route path="/erros" element={<Erros />} />
+                  </Route>
+                  <Route path="*" element={<NotFound />} />
+                </Routes>
+              </Suspense>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  </RuntimeErrorBoundary>
 );
 
 export default App;
