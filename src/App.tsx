@@ -25,6 +25,7 @@ const Comunicacoes = lazy(() => import("./pages/Comunicacoes.tsx"));
 const Erros = lazy(() => import("./pages/Erros.tsx"));
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 const I18nPreview = lazy(() => import("./pages/I18nPreview.tsx"));
+const Status = lazy(() => import("./pages/Status.tsx"));
 
 const queryClient = new QueryClient();
 
