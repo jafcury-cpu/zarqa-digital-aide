@@ -1,12 +1,16 @@
-import { useState } from "react";
-import { Chrome, Lock, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { AlertTriangle, Chrome, Copy, Lock, RefreshCw, ShieldCheck } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
+import { toast as sonnerToast } from "sonner";
 import { lovable } from "@/integrations/lovable";
 import { useDocumentTitle } from "@/hooks/use-document-title";
+import { clearOAuthCallbackParams, mapOAuthError, readOAuthCallbackError, type OAuthErrorInfo } from "@/lib/oauth-errors";
+import { logError } from "@/lib/error-telemetry";
 
 const Login = () => {
   useDocumentTitle("Login");
@@ -14,7 +18,23 @@ const Login = () => {
   const location = useLocation();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<OAuthErrorInfo | null>(null);
   const redirectTo = typeof location.state?.from === "string" ? location.state.from : "/dashboard";
+
+  // Detect OAuth callback errors on mount (e.g., redirected back with ?error=...)
+  useEffect(() => {
+    const cbError = readOAuthCallbackError();
+    if (cbError) {
+      setError(cbError);
+      void logError({
+        message: `[OAuth callback] ${cbError.title}: ${cbError.description}`,
+        source: "oauth.callback",
+        severity: "error",
+        context: { code: cbError.code, raw: cbError.raw },
+      });
+      clearOAuthCallbackParams();
+    }
+  }, []);
 
   if (user) {
     return <Navigate to={redirectTo} replace />;
@@ -22,33 +42,77 @@ const Login = () => {
 
   const handleGoogleSignIn = async () => {
     setSubmitting(true);
+    setError(null);
 
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-      extraParams: {
-        prompt: "select_account",
-      },
-    });
-
-    if (result.redirected) {
-      return;
-    }
-
-    if (result.error) {
-      toast({
-        variant: "destructive",
-        title: "Não foi possível entrar",
-        description: result.error.message,
+    // Pre-flight validation: ensure origin is HTTPS or localhost (Google rejects http on real domains)
+    const origin = window.location.origin;
+    const isLocal = origin.startsWith("http://localhost") || origin.startsWith("http://127.0.0.1");
+    if (!origin.startsWith("https://") && !isLocal) {
+      const info = mapOAuthError({
+        message: `redirect_uri inválido: ${origin}. Google exige HTTPS para domínios públicos.`,
+        code: "redirect_uri_mismatch",
       });
+      setError(info);
       setSubmitting(false);
       return;
     }
 
-    toast({
-      title: "Redirecionando",
-      description: "Concluindo autenticação com Google.",
-    });
-    setSubmitting(false);
+    try {
+      const result = await lovable.auth.signInWithOAuth("google", {
+        redirect_uri: origin,
+        extraParams: { prompt: "select_account" },
+      });
+
+      if (result.redirected) return;
+
+      if (result.error) {
+        const info = mapOAuthError(result.error);
+        setError(info);
+        void logError({
+          message: `[OAuth] ${info.title}: ${info.description}`,
+          source: "oauth.signin",
+          severity: "error",
+          context: { code: info.code, raw: info.raw, origin },
+        });
+        toast({
+          variant: "destructive",
+          title: info.title,
+          description: info.description,
+        });
+        setSubmitting(false);
+        return;
+      }
+
+      toast({ title: "Redirecionando", description: "Concluindo autenticação com Google." });
+    } catch (err) {
+      const info = mapOAuthError(err);
+      setError(info);
+      void logError({
+        message: `[OAuth][throw] ${info.title}: ${info.description}`,
+        source: "oauth.signin",
+        severity: "error",
+        stack: err instanceof Error ? err.stack : null,
+        context: { code: info.code, raw: info.raw, origin },
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const copyTechnical = async () => {
+    if (!error) return;
+    try {
+      await navigator.clipboard.writeText(
+        JSON.stringify(
+          { code: error.code, title: error.title, description: error.description, raw: error.raw, origin: window.location.origin },
+          null,
+          2,
+        ),
+      );
+      sonnerToast.success("Detalhes técnicos copiados");
+    } catch {
+      sonnerToast.error("Não foi possível copiar");
+    }
   };
 
   return (
@@ -91,12 +155,50 @@ const Login = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <Button type="button" variant="hero" size="lg" className="w-full" disabled={submitting} onClick={handleGoogleSignIn}>
-                <Chrome className="size-4" />
-                {submitting ? "Conectando..." : "Continuar com Google"}
+              {error && (
+                <Alert variant="destructive" role="alert">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>{error.title}</AlertTitle>
+                  <AlertDescription className="space-y-2">
+                    <p className="text-sm">{error.description}</p>
+                    {error.guidance && (
+                      <p className="rounded-md bg-destructive/10 p-2 text-xs leading-relaxed">
+                        💡 {error.guidance}
+                      </p>
+                    )}
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button type="button" size="sm" variant="outline" onClick={copyTechnical}>
+                        <Copy className="mr-1.5 h-3.5 w-3.5" /> Copiar detalhes
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => setError(null)}>
+                        Fechar
+                      </Button>
+                    </div>
+                    <details className="pt-1">
+                      <summary className="cursor-pointer text-[11px] opacity-70">Mensagem técnica · código {error.code}</summary>
+                      <pre className="mt-1 max-h-32 overflow-auto whitespace-pre-wrap break-all rounded bg-background/60 p-2 text-[11px]">
+                        {error.raw ?? "(sem detalhes)"}
+                      </pre>
+                    </details>
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <Button
+                type="button"
+                variant="hero"
+                size="lg"
+                className="w-full"
+                disabled={submitting}
+                onClick={handleGoogleSignIn}
+              >
+                {error ? <RefreshCw className="size-4" /> : <Chrome className="size-4" />}
+                {submitting ? "Conectando..." : error ? "Tentar novamente" : "Continuar com Google"}
               </Button>
               <p className="text-center text-sm text-muted-foreground">Cadastro público desativado para operação pessoal segura.</p>
-              <p className="text-center text-xs text-muted-foreground">O acesso por senha foi removido e o login agora acontece somente pelo Google autorizado.</p>
+              <p className="text-center text-xs text-muted-foreground">
+                O acesso por senha foi removido e o login agora acontece somente pelo Google autorizado.
+              </p>
             </div>
           </CardContent>
         </Card>
