@@ -25,7 +25,7 @@ const Login = () => {
   const [stuck, setStuck] = useState(false);
   const [error, setError] = useState<OAuthErrorInfo | null>(null);
   const stuckTimerRef = useRef<number | null>(null);
-  const redirectTo = typeof location.state?.from === "string" ? location.state.from : "/dashboard";
+  const redirectTo = typeof location.state?.from === "string" ? location.state.from : "/post-login";
 
   // Detect OAuth callback errors on mount (e.g., redirected back with ?error=...)
   useEffect(() => {
