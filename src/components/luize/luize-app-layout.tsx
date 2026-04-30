@@ -40,9 +40,7 @@ export function LuizeAppLayout() {
                 <p className="text-sm text-muted-foreground">{current.subtitle}</p>
                 <p className="truncate text-xs text-foreground/80">{user?.email}</p>
               </div>
-              <Badge variant="info" className="hidden md:inline-flex">
-                Sessão ativa
-              </Badge>
+              <SessionStatusBadge />
             </div>
           </header>
           <main className="flex-1 px-4 py-4 md:px-6 md:py-6">
