@@ -1225,17 +1225,41 @@ const Chat = () => {
 
       if (webhookUrl) {
         const history = [...messages, userMessage as MessageRow].map((message) => ({ role: message.role, content: message.content }));
+        const requestBody = {
+          message: content,
+          source: "luize-chat",
+          history,
+        };
+        const startedAt = performance.now();
         const { data, error } = await supabase.functions.invoke("chat-webhook", {
-          body: {
-            message: content,
-            source: "luize-chat",
-            history,
-          },
+          body: requestBody,
         });
+        const duration = Math.round(performance.now() - startedAt);
 
         if (error) {
+          recordWebhookCall({
+            at: Date.now(),
+            mode: "message",
+            durationMs: duration,
+            status: "error",
+            httpStatus: (error as { context?: { status?: number } })?.context?.status ?? null,
+            errorMessage: error.message,
+            request: requestBody,
+            response: data ?? null,
+          });
           throw new Error(error.message || "Falha ao acionar o backend do chat.");
         }
+
+        recordWebhookCall({
+          at: Date.now(),
+          mode: "message",
+          durationMs: duration,
+          status: "success",
+          httpStatus: 200,
+          errorMessage: null,
+          request: requestBody,
+          response: data ?? null,
+        });
 
         reply = typeof data?.reply === "string" ? data.reply.trim() || reply : reply;
       }
