@@ -6,6 +6,7 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { ThemeProvider } from "@/components/theme-provider";
 import { LoadingPanel } from "@/components/luize/loading-panel";
 import { LuizeAppLayout } from "@/components/luize/luize-app-layout";
+import { DebugOverlay } from "@/components/luize/debug-overlay";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -43,6 +44,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <DebugOverlay />
           <BrowserRouter>
             <Suspense fallback={routeFallback}>
               <Routes>
