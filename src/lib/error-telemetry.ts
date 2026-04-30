@@ -64,7 +64,7 @@ export function clearLocalRecentErrors() {
   window.dispatchEvent(new CustomEvent("luize:error-logged"));
 }
 
-export async function logError(input: ErrorLogInput): Promise<void> {
+export async function logError(input: ErrorLogInput): Promise<string> {
   const requestId = input.requestId ?? generateRequestId();
   const route = input.route ?? getCurrentRoute();
   const userAgent = typeof navigator !== "undefined" ? navigator.userAgent : null;
