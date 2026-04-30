@@ -109,14 +109,34 @@ export function initErrorTelemetry() {
   if (initialized || typeof window === "undefined") return;
   initialized = true;
 
+  const showRuntimeToast = (errorId: string, message: string) => {
+    // Lazy import sonner to avoid breaking initial bundle order
+    void import("sonner").then(({ toast }) => {
+      toast.error(`Erro de runtime · ${errorId}`, {
+        description: message.slice(0, 200),
+        duration: 8000,
+        action: {
+          label: "Copiar ID",
+          onClick: () => {
+            void navigator.clipboard?.writeText(errorId);
+          },
+        },
+      });
+    }).catch(() => {/* ignore */});
+  };
+
   window.addEventListener("error", (event) => {
     const err = event.error as Error | undefined;
+    const errorId = generateErrorId();
+    const message = err?.message || event.message || "Unknown error";
     void logError({
-      message: err?.message || event.message || "Unknown error",
+      message: `${errorId} · ${message}`,
       stack: err?.stack ?? null,
       source: "window.error",
       severity: "error",
+      requestId: errorId,
       context: {
+        errorId,
         filename: event.filename,
         lineno: event.lineno,
         colno: event.colno,
@@ -124,10 +144,11 @@ export function initErrorTelemetry() {
     });
     pushDebug({
       level: "error",
-      source: "window.error",
-      message: err?.message || event.message || "Unknown error",
-      details: { stack: err?.stack, filename: event.filename, lineno: event.lineno },
+      source: `window.error · ${errorId}`,
+      message,
+      details: { errorId, stack: err?.stack, filename: event.filename, lineno: event.lineno },
     });
+    showRuntimeToast(errorId, message);
   });
 
   window.addEventListener("unhandledrejection", (event) => {
@@ -139,18 +160,22 @@ export function initErrorTelemetry() {
           ? reason
           : JSON.stringify(reason);
     const stack = reason instanceof Error ? reason.stack : null;
+    const errorId = generateErrorId();
     void logError({
-      message: message || "Unhandled promise rejection",
+      message: `${errorId} · ${message || "Unhandled promise rejection"}`,
       stack,
       source: "unhandledrejection",
       severity: "error",
+      requestId: errorId,
+      context: { errorId },
     });
     pushDebug({
       level: "error",
-      source: "unhandledrejection",
+      source: `unhandledrejection · ${errorId}`,
       message: message || "Unhandled promise rejection",
-      details: { stack },
+      details: { errorId, stack },
     });
+    showRuntimeToast(errorId, message || "Unhandled promise rejection");
   });
 
   // Patch fetch to capture failed Supabase HTTP calls (RLS, validation, 4xx/5xx)
