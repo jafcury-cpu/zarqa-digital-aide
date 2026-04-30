@@ -322,6 +322,48 @@ export type Database = {
         }
         Relationships: []
       }
+      error_logs: {
+        Row: {
+          context: Json | null
+          created_at: string
+          id: string
+          message: string
+          request_id: string | null
+          route: string | null
+          severity: string
+          source: string
+          stack: string | null
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          context?: Json | null
+          created_at?: string
+          id?: string
+          message: string
+          request_id?: string | null
+          route?: string | null
+          severity?: string
+          source?: string
+          stack?: string | null
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          context?: Json | null
+          created_at?: string
+          id?: string
+          message?: string
+          request_id?: string | null
+          route?: string | null
+          severity?: string
+          source?: string
+          stack?: string | null
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       health_scores: {
         Row: {
           calories: number
