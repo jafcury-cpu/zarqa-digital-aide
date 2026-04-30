@@ -570,6 +570,118 @@ function RealtimeIndicator({
   );
 }
 
+function WebhookInspector() {
+  const [entries, setEntries] = useState<WebhookCallEntry[]>(() => getWebhookCallLog());
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  useEffect(() => {
+    const handler = () => setEntries(getWebhookCallLog());
+    window.addEventListener(WEBHOOK_LOG_CHANGED_EVENT, handler);
+    window.addEventListener("storage", handler);
+    return () => {
+      window.removeEventListener(WEBHOOK_LOG_CHANGED_EVENT, handler);
+      window.removeEventListener("storage", handler);
+    };
+  }, []);
+
+  const handleClear = () => {
+    clearWebhookCallLog();
+    setEntries([]);
+  };
+
+  const fmtJson = (value: unknown) => {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
+    }
+  };
+
+  return (
+    <SectionCard
+      title="Inspetor do webhook"
+      description="Últimas requisições enviadas para o backend do chat (somente nesta sessão)"
+      eyebrow="DIAGNÓSTICO"
+      action={
+        <div className="flex items-center gap-2">
+          <Badge variant="outline" className="font-mono text-[10px]">
+            {entries.length} req
+          </Badge>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handleClear}
+            disabled={entries.length === 0}
+            className="h-8 gap-1.5"
+          >
+            <Trash2 className="size-3.5" />
+            Limpar
+          </Button>
+        </div>
+      }
+    >
+      {entries.length === 0 ? (
+        <p className="rounded-xl border border-dashed border-border/60 bg-panel/50 p-6 text-center text-sm text-muted-foreground">
+          Nenhuma chamada registrada ainda. Envie uma mensagem ou clique em "Testar" na aba Conversa.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {entries.map((entry) => {
+            const isOpen = expanded === entry.id;
+            return (
+              <li key={entry.id} className="rounded-xl border border-border bg-panel-elevated">
+                <button
+                  type="button"
+                  onClick={() => setExpanded(isOpen ? null : entry.id)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-panel"
+                >
+                  <div className="flex min-w-0 flex-wrap items-center gap-2">
+                    <Badge variant={entry.status === "success" ? "success" : "destructive"}>
+                      {entry.httpStatus ?? (entry.status === "success" ? "OK" : "ERR")}
+                    </Badge>
+                    <Badge variant="outline" className="font-mono text-[10px]">
+                      {entry.mode}
+                    </Badge>
+                    <span className="font-mono text-xs text-muted-foreground">
+                      {entry.durationMs} ms
+                    </span>
+                    {entry.errorMessage ? (
+                      <span className="truncate text-xs text-destructive">{entry.errorMessage}</span>
+                    ) : null}
+                  </div>
+                  <span className="shrink-0 font-mono text-[11px] text-muted-foreground">
+                    {new Date(entry.at).toLocaleString("pt-BR", {
+                      timeZone: "America/Sao_Paulo",
+                      hour12: false,
+                    })}
+                  </span>
+                </button>
+                {isOpen ? (
+                  <div className="space-y-3 border-t border-border px-4 py-3">
+                    <div>
+                      <p className="mb-1 text-kicker">Request payload</p>
+                      <pre className="max-h-64 overflow-auto rounded-md border border-border/60 bg-background/60 p-3 text-[11px] leading-relaxed text-muted-foreground">
+                        {fmtJson(entry.request)}
+                      </pre>
+                    </div>
+                    <div>
+                      <p className="mb-1 text-kicker">Response</p>
+                      <pre className="max-h-64 overflow-auto rounded-md border border-border/60 bg-background/60 p-3 text-[11px] leading-relaxed text-muted-foreground">
+                        {fmtJson(entry.response)}
+                      </pre>
+                    </div>
+                  </div>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </SectionCard>
+  );
+}
+
 const Chat = () => {
   useDocumentTitle("Chat");
   const { user } = useAuth();
