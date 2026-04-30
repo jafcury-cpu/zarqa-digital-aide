@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { pushDebug } from "./debug-mode";
 
 export type ErrorSeverity = "error" | "warning" | "info";
 
@@ -114,6 +115,12 @@ export function initErrorTelemetry() {
         colno: event.colno,
       },
     });
+    pushDebug({
+      level: "error",
+      source: "window.error",
+      message: err?.message || event.message || "Unknown error",
+      details: { stack: err?.stack, filename: event.filename, lineno: event.lineno },
+    });
   });
 
   window.addEventListener("unhandledrejection", (event) => {
@@ -131,7 +138,54 @@ export function initErrorTelemetry() {
       source: "unhandledrejection",
       severity: "error",
     });
+    pushDebug({
+      level: "error",
+      source: "unhandledrejection",
+      message: message || "Unhandled promise rejection",
+      details: { stack },
+    });
   });
+
+  // Patch fetch to capture failed Supabase HTTP calls (RLS, validation, 4xx/5xx)
+  const origFetch = window.fetch.bind(window);
+  window.fetch = async (...args: Parameters<typeof fetch>) => {
+    const [input, init] = args;
+    const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+    const isSupabase = typeof url === "string" && url.includes(".supabase.co");
+    try {
+      const response = await origFetch(...args);
+      if (isSupabase && !response.ok) {
+        // Clone so we don't consume the original body
+        try {
+          const clone = response.clone();
+          const text = await clone.text();
+          let body: unknown = text;
+          try { body = JSON.parse(text); } catch { /* keep raw text */ }
+          const isRest = url.includes("/rest/v1/");
+          const isFn = url.includes("/functions/v1/");
+          pushDebug({
+            level: "error",
+            source: isFn ? "supabase.fn" : isRest ? "supabase.rest" : "supabase.http",
+            message: `HTTP ${response.status} · ${(init?.method ?? "GET").toUpperCase()} ${url.split(".supabase.co")[1] ?? url}`,
+            details: { status: response.status, body },
+          });
+        } catch {
+          /* ignore inspection errors */
+        }
+      }
+      return response;
+    } catch (err) {
+      if (isSupabase) {
+        pushDebug({
+          level: "error",
+          source: "supabase.network",
+          message: err instanceof Error ? err.message : String(err),
+          details: { url },
+        });
+      }
+      throw err;
+    }
+  };
 
   // Patch console.error to capture React/dev errors too
   const origError = console.error;
