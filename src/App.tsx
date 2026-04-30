@@ -10,6 +10,7 @@ import { DebugOverlay } from "@/components/luize/debug-overlay";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { RuntimeErrorBoundary } from "@/components/runtime-error-boundary";
 
 const Index = lazy(() => import("./pages/Index.tsx"));
 const Login = lazy(() => import("./pages/Login.tsx"));
