@@ -1,10 +1,11 @@
-import { useEffect, useState } from "react";
-import { AlertTriangle, Chrome, Copy, Lock, RefreshCw, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Chrome, Copy, LifeBuoy, Lock, RefreshCw, ShieldCheck } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { LoginErrorBoundary } from "@/components/auth/login-error-boundary";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { lovable } from "@/integrations/lovable";
@@ -12,13 +13,18 @@ import { useDocumentTitle } from "@/hooks/use-document-title";
 import { clearOAuthCallbackParams, mapOAuthError, readOAuthCallbackError, type OAuthErrorInfo } from "@/lib/oauth-errors";
 import { logError } from "@/lib/error-telemetry";
 
+const SUPPORT_HREF = "mailto:suporte@luize.app?subject=Falha%20no%20login%20Luize";
+const STUCK_TIMEOUT_MS = 15_000;
+
 const Login = () => {
   useDocumentTitle("Login");
   const { user } = useAuth();
   const location = useLocation();
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [stuck, setStuck] = useState(false);
   const [error, setError] = useState<OAuthErrorInfo | null>(null);
+  const stuckTimerRef = useRef<number | null>(null);
   const redirectTo = typeof location.state?.from === "string" ? location.state.from : "/dashboard";
 
   // Detect OAuth callback errors on mount (e.g., redirected back with ?error=...)
@@ -40,9 +46,30 @@ const Login = () => {
     return <Navigate to={redirectTo} replace />;
   }
 
+  const clearStuckTimer = () => {
+    if (stuckTimerRef.current !== null) {
+      window.clearTimeout(stuckTimerRef.current);
+      stuckTimerRef.current = null;
+    }
+  };
+
+  // Cleanup on unmount
+  useEffect(() => () => clearStuckTimer(), []);
+
   const handleGoogleSignIn = async () => {
     setSubmitting(true);
+    setStuck(false);
     setError(null);
+    clearStuckTimer();
+    stuckTimerRef.current = window.setTimeout(() => {
+      setStuck(true);
+      void logError({
+        message: "[OAuth] Login travado: nenhum redirect/resposta após 15s",
+        source: "oauth.stuck",
+        severity: "warning",
+        context: { origin: window.location.origin },
+      });
+    }, STUCK_TIMEOUT_MS);
 
     // Pre-flight validation: ensure origin is HTTPS or localhost (Google rejects http on real domains)
     const origin = window.location.origin;
@@ -95,8 +122,26 @@ const Login = () => {
         context: { code: info.code, raw: info.raw, origin },
       });
     } finally {
+      clearStuckTimer();
       setSubmitting(false);
     }
+  };
+
+  const handleCancelStuck = () => {
+    clearStuckTimer();
+    setSubmitting(false);
+    setStuck(false);
+    sonnerToast.info("Tentativa cancelada. Você pode tentar de novo.");
+  };
+
+  const handleHardReset = () => {
+    clearStuckTimer();
+    try {
+      sessionStorage.clear();
+    } catch {
+      /* ignore */
+    }
+    window.location.href = "/login";
   };
 
   const copyTechnical = async () => {
@@ -184,17 +229,60 @@ const Login = () => {
                 </Alert>
               )}
 
+              {stuck && submitting && (
+                <Alert variant="destructive" role="alert">
+                  <AlertTriangle className="h-4 w-4" />
+                  <AlertTitle>O login não respondeu</AlertTitle>
+                  <AlertDescription className="space-y-2">
+                    <p className="text-sm">
+                      Não recebemos resposta do Google em 15 segundos. A janela pode ter sido bloqueada, ou a rede está instável.
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Button type="button" size="sm" variant="outline" onClick={handleCancelStuck}>
+                        Cancelar tentativa
+                      </Button>
+                      <Button type="button" size="sm" variant="outline" onClick={handleHardReset}>
+                        <RefreshCw className="mr-1.5 h-3.5 w-3.5" /> Recarregar e limpar sessão
+                      </Button>
+                    </div>
+                  </AlertDescription>
+                </Alert>
+              )}
+
               <Button
                 type="button"
                 variant="hero"
                 size="lg"
                 className="w-full"
-                disabled={submitting}
+                disabled={submitting && !stuck}
                 onClick={handleGoogleSignIn}
               >
-                {error ? <RefreshCw className="size-4" /> : <Chrome className="size-4" />}
-                {submitting ? "Conectando..." : error ? "Tentar novamente" : "Continuar com Google"}
+                {error || stuck ? <RefreshCw className="size-4" /> : <Chrome className="size-4" />}
+                {submitting && !stuck
+                  ? "Conectando..."
+                  : stuck
+                    ? "Tentar de novo"
+                    : error
+                      ? "Tentar novamente"
+                      : "Continuar com Google"}
               </Button>
+
+              <div className="flex items-center justify-center gap-3 pt-1 text-xs">
+                <a
+                  href={SUPPORT_HREF}
+                  className="inline-flex items-center gap-1 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  <LifeBuoy className="h-3.5 w-3.5" /> Falar com suporte
+                </a>
+                <span className="text-muted-foreground/50" aria-hidden>•</span>
+                <a
+                  href="/status"
+                  className="inline-flex items-center gap-1 text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  Ver status do app
+                </a>
+              </div>
+
               <p className="text-center text-sm text-muted-foreground">Cadastro público desativado para operação pessoal segura.</p>
               <p className="text-center text-xs text-muted-foreground">
                 O acesso por senha foi removido e o login agora acontece somente pelo Google autorizado.
@@ -207,4 +295,10 @@ const Login = () => {
   );
 };
 
-export default Login;
+const LoginWithBoundary = () => (
+  <LoginErrorBoundary supportHref={SUPPORT_HREF}>
+    <Login />
+  </LoginErrorBoundary>
+);
+
+export default LoginWithBoundary;
