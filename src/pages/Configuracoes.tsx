@@ -347,6 +347,54 @@ const Configuracoes = () => {
 
           <RealtimeToastSimulator severity={toastSeverity} />
 
+          <div className="flex flex-col gap-3 rounded-2xl border border-border bg-panel-elevated p-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex flex-1 items-start gap-3">
+              <Bug className="mt-0.5 size-4 text-muted-foreground" />
+              <div className="space-y-1">
+                <label htmlFor="debug-mode" className="text-sm font-medium text-foreground">
+                  Modo debug
+                </label>
+                <p className="text-sm text-muted-foreground">
+                  Mostra um painel flutuante com erros de validação, falhas de RLS e respostas HTTP do Supabase em tempo real — sem precisar abrir o console.
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {debugMode ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    pushDebug({
+                      level: "info",
+                      source: "manual-test",
+                      message: "Entrada de teste do modo debug",
+                      details: { triggeredAt: new Date().toISOString() },
+                    })
+                  }
+                >
+                  Disparar teste
+                </Button>
+              ) : null}
+              <Switch
+                id="debug-mode"
+                checked={debugMode}
+                onCheckedChange={(value) => {
+                  setDebugMode(value);
+                  setDebugModeEnabled(value);
+                  toast({
+                    title: value ? "Modo debug ativado" : "Modo debug desativado",
+                    description: value
+                      ? "Painel flutuante visível no canto inferior direito."
+                      : "Painel ocultado.",
+                  });
+                }}
+                aria-label="Ativar modo debug"
+              />
+            </div>
+          </div>
+
           <Button type="submit" variant="hero" disabled={saving || loading || Boolean(webhookError)}>
             <Save className="size-4" />
             {saving ? "Salvando..." : "Salvar configurações"}
