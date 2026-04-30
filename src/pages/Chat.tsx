@@ -1294,7 +1294,13 @@ const Chat = () => {
   };
 
   return (
-    <div className="grid gap-4 xl:grid-cols-[1.6fr_0.7fr]">
+    <Tabs defaultValue="conversa" className="space-y-4">
+      <TabsList>
+        <TabsTrigger value="conversa">Conversa</TabsTrigger>
+        <TabsTrigger value="webhook">Webhook</TabsTrigger>
+      </TabsList>
+      <TabsContent value="conversa" className="m-0">
+        <div className="grid gap-4 xl:grid-cols-[1.6fr_0.7fr]">
       <SectionCard
         title="Canal direto com a Luize"
         description="Interface de chat persistida no banco e pronta para webhook externo"
