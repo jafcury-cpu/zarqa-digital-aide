@@ -44,6 +44,7 @@ const App = () => (
         <TooltipProvider>
           <Toaster />
           <Sonner />
+          <DebugOverlay />
           <BrowserRouter>
             <Suspense fallback={routeFallback}>
               <Routes>
