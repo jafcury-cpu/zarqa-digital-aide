@@ -4,6 +4,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { LuizeSidebar } from "@/components/luize/luize-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { SessionStatusBadge } from "@/components/auth/session-status-badge";
+import { ReportProblemButton } from "@/components/luize/report-problem-button";
 
 const labels: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "Dashboard", subtitle: "Resumo executivo do dia" },
@@ -39,6 +40,7 @@ export function LuizeAppLayout() {
                 <p className="text-sm text-muted-foreground">{current.subtitle}</p>
                 <p className="truncate text-xs text-foreground/80">{user?.email}</p>
               </div>
+              <ReportProblemButton />
               <SessionStatusBadge />
             </div>
           </header>
