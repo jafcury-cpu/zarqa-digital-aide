@@ -1,16 +1,20 @@
-import { useEffect, useState } from "react";
-import { AlertTriangle, Chrome, Copy, Lock, RefreshCw, ShieldCheck } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { AlertTriangle, Chrome, Copy, LifeBuoy, Lock, RefreshCw, ShieldCheck } from "lucide-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/components/auth/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { LoginErrorBoundary } from "@/components/auth/login-error-boundary";
 import { useToast } from "@/hooks/use-toast";
 import { toast as sonnerToast } from "sonner";
 import { lovable } from "@/integrations/lovable";
 import { useDocumentTitle } from "@/hooks/use-document-title";
 import { clearOAuthCallbackParams, mapOAuthError, readOAuthCallbackError, type OAuthErrorInfo } from "@/lib/oauth-errors";
 import { logError } from "@/lib/error-telemetry";
+
+const SUPPORT_HREF = "mailto:suporte@luize.app?subject=Falha%20no%20login%20Luize";
+const STUCK_TIMEOUT_MS = 15_000;
 
 const Login = () => {
   useDocumentTitle("Login");
