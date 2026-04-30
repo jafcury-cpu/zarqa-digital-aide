@@ -4,6 +4,7 @@ import { useAuth } from "@/components/auth/auth-provider";
 import { Badge } from "@/components/ui/badge";
 import { LuizeSidebar } from "@/components/luize/luize-sidebar";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { SessionStatusBadge } from "@/components/auth/session-status-badge";
 
 const labels: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "Dashboard", subtitle: "Resumo executivo do dia" },
