@@ -696,6 +696,88 @@ const Financeiro = () => {
         </div>
       </SectionCard>
 
+      {/* Row 6.5: Dashboards por Banco */}
+      <SectionCard
+        title="Dashboards por Banco"
+        description="Posição agregada de contas, cartões e conciliação por instituição"
+        eyebrow="Bancos"
+      >
+        {bankDashboards.length === 0 ? (
+          <p className="rounded-2xl border border-border bg-panel-elevated p-5 text-sm text-muted-foreground">
+            Nenhuma instituição cadastrada ainda. Adicione contas ou cartões nas abas abaixo.
+          </p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {bankDashboards.map((d) => (
+              <div key={d.bank} className="flex flex-col gap-4 rounded-2xl border border-border bg-panel-elevated p-5">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Instituição</p>
+                    <h3 className="mt-1 font-display text-2xl text-foreground">{d.bank}</h3>
+                  </div>
+                  <div className="rounded-2xl bg-primary/15 p-2.5 text-primary">
+                    <Landmark className="h-5 w-5" />
+                  </div>
+                </div>
+
+                {/* Saldo agregado */}
+                <div>
+                  <p className="text-xs text-muted-foreground">Saldo agregado</p>
+                  <p className="mt-1 font-display text-3xl text-foreground">{formatCurrency(d.totalBalance)}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {d.accounts.length} {d.accounts.length === 1 ? "conta" : "contas"}
+                    {d.accounts.length > 0 && ` • ${d.accounts.map((a) => a.account_type).join(", ")}`}
+                  </p>
+                </div>
+
+                {/* Cartões */}
+                {d.cards.length > 0 && (
+                  <div className="rounded-xl border border-border bg-panel p-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                        Cartões ({d.cards.length})
+                      </p>
+                      <CreditCard className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="mt-2 flex items-baseline justify-between">
+                      <span className="text-sm text-muted-foreground">Limite usado</span>
+                      <span className="font-display text-lg text-foreground">{d.usagePct}%</span>
+                    </div>
+                    <Progress value={d.usagePct} className="mt-1 h-2 bg-muted" />
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      {formatCurrency(d.totalUsed)} de {formatCurrency(d.totalLimit)}
+                    </p>
+                  </div>
+                )}
+
+                {/* Conciliação */}
+                <div className="rounded-xl border border-border bg-panel p-3">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Conciliação</p>
+                    <ScanSearch className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  {d.reconciliationPct === null ? (
+                    <p className="mt-2 text-sm text-muted-foreground">Sem registro de conciliação</p>
+                  ) : (
+                    <>
+                      <div className="mt-2 flex items-baseline justify-between">
+                        <span className="text-sm text-muted-foreground">Progresso</span>
+                        <span className="font-display text-lg text-foreground">{d.reconciliationPct}%</span>
+                      </div>
+                      <Progress value={d.reconciliationPct} className="mt-1 h-2 bg-muted" />
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Fase: {d.reconciliationPhase ?? "manual"}
+                        {d.reconciliationNote ? ` • ${d.reconciliationNote}` : ""}
+                      </p>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </SectionCard>
+
       {/* Row 7: Tabs — Contas, Cartões, Conciliação */}
       <SectionCard title="Visão Detalhada" description="Separação por contas, cartões e conciliação" eyebrow={t("financeiro.eyebrow.deepDive")}>
         <Tabs defaultValue="contas" className="space-y-4">
