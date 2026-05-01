@@ -705,6 +705,37 @@ const Financeiro = () => {
           </TabsContent>
         </Tabs>
       </SectionCard>
+
+      {/* Roadmap manual → Open Finance */}
+      <SectionCard
+        title="Estratégia de Conciliação"
+        description="Comece rápido com extrato manual e evolua para Open Finance sem retrabalho"
+        eyebrow="Roadmap"
+      >
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border border-border bg-panel-elevated p-5">
+            <h3 className="font-display text-lg text-foreground">Fase 1 — Manual</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Cole o extrato (OFX, CSV ou texto), Luize extrai e categoriza, você valida e marca divergências antes de fechar o mês.
+            </p>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
+              <CalendarClock className="h-3.5 w-3.5" />
+              Já disponível — use o bloco "Importar Extrato" acima
+            </div>
+          </div>
+          <div className="rounded-2xl border border-border bg-panel-elevated p-5">
+            <h3 className="font-display text-lg text-foreground">Fase 2 — Open Finance</h3>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              Conectar Itaú, Bradesco e C6 via Open Finance para atualizar extratos automaticamente e eliminar a importação manual.
+            </p>
+            <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-accent/30 px-3 py-1 text-xs font-semibold text-accent-foreground">
+              <BadgeAlert className="h-3.5 w-3.5" />
+              {/* TODO: conectar com n8n webhook */}
+              Aguardando integração bancária
+            </div>
+          </div>
+        </div>
+      </SectionCard>
     </div>
   );
 };
