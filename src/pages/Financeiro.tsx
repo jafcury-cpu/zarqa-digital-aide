@@ -497,8 +497,13 @@ const Financeiro = () => {
 
         <SectionCard title="Próximos vencimentos" description="Agenda operacional de pagamentos" eyebrow={t("financeiro.eyebrow.timeline")} className="xl:col-span-4">
           <div className="space-y-3">
-            {defaultTimeline.map((item) => (
-              <div key={`${item.day}-${item.title}`} className="rounded-xl border border-border bg-panel-elevated p-4">
+            {timeline.length === 0 && (
+              <p className="rounded-xl border border-border bg-panel-elevated p-4 text-sm text-muted-foreground">
+                Nenhum vencimento nos próximos 14 dias.
+              </p>
+            )}
+            {timeline.map((item, idx) => (
+              <div key={`${item.day}-${item.title}-${idx}`} className="rounded-xl border border-border bg-panel-elevated p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{item.day}</p>
