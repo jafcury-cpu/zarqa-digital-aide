@@ -19,6 +19,7 @@ import { getFallbackFinanceData, getFinanceData, type FinanceData } from "@/lib/
 import { BankAccountFormDialog } from "@/components/luize/bank-account-form-dialog";
 import { CreditCardFormDialog } from "@/components/luize/credit-card-form-dialog";
 import { ReconciliationFormDialog } from "@/components/luize/reconciliation-form-dialog";
+import { UpcomingBillsTimeline } from "@/components/luize/upcoming-bills-timeline";
 import {
   formatCurrency,
   formatDate,
@@ -559,29 +560,8 @@ const Financeiro = () => {
           <DeferredLazySection component={FinanceCategoryChart} componentProps={{ data: financeData.categoryData }} minHeightClassName="min-h-[320px]" />
         </SectionCard>
 
-        <SectionCard title="Próximos vencimentos" description="Agenda operacional de pagamentos" eyebrow={t("financeiro.eyebrow.timeline")} className="xl:col-span-4">
-          <div className="space-y-3">
-            {timeline.length === 0 && (
-              <p className="rounded-xl border border-border bg-panel-elevated p-4 text-sm text-muted-foreground">
-                Nenhum vencimento nos próximos 14 dias.
-              </p>
-            )}
-            {timeline.map((item, idx) => (
-              <div key={`${item.day}-${item.title}-${idx}`} className="rounded-xl border border-border bg-panel-elevated p-4">
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">{item.day}</p>
-                    <p className="mt-2 font-medium text-foreground">{item.title}</p>
-                    <p className="mt-1 text-sm text-muted-foreground">{item.meta}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-foreground">{item.amount}</p>
-                    <ArrowUpRight className="ml-auto mt-2 h-4 w-4 text-muted-foreground" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+        <SectionCard title="Próximos vencimentos" description="Boletos e contas com filtros por estado e janela" eyebrow={t("financeiro.eyebrow.timeline")} className="xl:col-span-4">
+          <UpcomingBillsTimeline bills={financeData.upcomingBills} />
         </SectionCard>
       </div>
 
