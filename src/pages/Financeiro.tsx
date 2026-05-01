@@ -373,7 +373,47 @@ const Financeiro = () => {
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="finance-theme flex flex-col gap-4">
+      {/* Hero — cockpit financeiro pessoal + família */}
+      <section className="finance-hero">
+        <div className="relative z-10 grid gap-8 lg:grid-cols-[1.25fr_0.9fr] lg:items-end">
+          <div className="space-y-5">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em]">
+              <ShieldCheck className="h-3.5 w-3.5" />
+              Financeiro pessoal + família
+            </div>
+            <h2 className="font-display text-3xl leading-tight md:text-5xl">
+              Despesas, cartões, boletos e conciliação em um só cockpit.
+            </h2>
+            <p className="max-w-2xl text-sm text-white/80 md:text-base">
+              Visão clara das suas contas em Itaú, Bradesco, C6 e onde mais você operar — pronta para evoluir do extrato manual ao Open Finance.
+            </p>
+          </div>
+          <div className="finance-glass relative z-10 p-5 text-foreground">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium text-muted-foreground">Prontidão da conciliação</p>
+                <p className="mt-2 font-display text-4xl">{reconciliationCompletion}%</p>
+              </div>
+              <div className="rounded-2xl bg-accent/80 p-3 text-accent-foreground">
+                <Landmark className="h-6 w-6" />
+              </div>
+            </div>
+            <div className="mt-5 space-y-3">
+              {reconciliation.map((bank) => (
+                <div key={`hero-${bank.id}`} className="space-y-1.5">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold">{bank.institution}</span>
+                    <span className="text-muted-foreground">{bank.progress_pct}%</span>
+                  </div>
+                  <Progress value={bank.progress_pct} className="h-2 bg-muted" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Row 1: Summary + Reconciliation */}
       <div className="grid gap-4 xl:grid-cols-12">
         <SectionCard title="Saldo Total" description="Posição consolidada dos últimos 30 dias" eyebrow={t("financeiro.eyebrow.cashPosition")} className="xl:col-span-4">
