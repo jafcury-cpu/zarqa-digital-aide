@@ -35,6 +35,7 @@ import {
   ReceiptText,
   ScanSearch,
   Save,
+  ShieldCheck,
   Wallet,
 } from "lucide-react";
 
