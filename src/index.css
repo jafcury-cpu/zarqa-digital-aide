@@ -152,3 +152,69 @@
     background: transparent;
   }
 }
+
+/* ============================================
+   Financeiro — tema claro escopado (inspirado em meu-tesouro-brilhante)
+   Aplicado apenas dentro do container .finance-theme.
+   ============================================ */
+.finance-theme {
+  --background: 42 43% 96%;
+  --foreground: 201 39% 14%;
+  --card: 0 0% 100%;
+  --card-foreground: 201 39% 14%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 201 39% 14%;
+  --primary: 188 72% 23%;
+  --primary-foreground: 48 100% 98%;
+  --secondary: 153 37% 90%;
+  --secondary-foreground: 188 52% 18%;
+  --muted: 40 27% 91%;
+  --muted-foreground: 202 17% 37%;
+  --accent: 35 96% 63%;
+  --accent-foreground: 24 41% 16%;
+  --border: 38 23% 82%;
+  --input: 38 23% 82%;
+  --ring: 188 72% 23%;
+  --success: 145 63% 35%;
+  --warning: 35 96% 63%;
+
+  /* Tokens internos da Luize que continuam sendo usados pelos componentes */
+  --panel: 0 0% 100%;
+  --panel-elevated: 40 35% 93%;
+
+  background:
+    radial-gradient(circle at top left, hsl(35 96% 63% / 0.18), transparent 24%),
+    radial-gradient(circle at top right, hsl(153 37% 90% / 0.55), transparent 22%),
+    linear-gradient(180deg, hsl(42 43% 96%), hsl(40 35% 93%));
+  color: hsl(var(--foreground));
+  border-radius: 1.25rem;
+  padding: 0.25rem;
+}
+
+.finance-theme .finance-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 1.75rem;
+  padding: 2rem 2.25rem;
+  background: linear-gradient(140deg, hsl(188 72% 23%) 0%, hsl(188 72% 18%) 45%, hsl(201 39% 14%) 100%);
+  color: hsl(48 100% 98%);
+}
+
+.finance-theme .finance-hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -10% -35% auto;
+  width: 22rem;
+  height: 22rem;
+  border-radius: 9999px;
+  background: radial-gradient(circle, hsl(35 96% 63% / 0.5) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.finance-theme .finance-glass {
+  background: hsl(0 0% 100% / 0.85);
+  border: 1px solid hsl(38 23% 82%);
+  box-shadow: 0 22px 60px -32px hsl(201 39% 14% / 0.28);
+  backdrop-filter: blur(16px);
+  border-radius: 1.5rem;
+}
