@@ -14,6 +14,9 @@ import {
   Code2,
   Eraser,
   Save,
+  Wand2,
+  Tags,
+  ExternalLink,
 } from "lucide-react";
 import { SectionCard } from "@/components/luize/section-card";
 import { Button } from "@/components/ui/button";
