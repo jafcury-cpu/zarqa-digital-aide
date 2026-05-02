@@ -433,6 +433,10 @@ const Configuracoes = () => {
           </div>
         </div>
       </SectionCard>
+
+      <div className="xl:col-span-2">
+        <TransactionsWebhookCard />
+      </div>
     </div>
   );
 };
