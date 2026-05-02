@@ -336,28 +336,67 @@ serve(async (req) => {
   try {
     payload = await req.json();
   } catch {
-    return finish({ error: "JSON inválido" }, 400, { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "JSON inválido", rejectedDetails: [], sourceLabel: "webhook" });
+    return finish(
+      {
+        error: "JSON inválido",
+        hint: "Envie um array direto [...] ou um objeto com a chave 'transactions' ou 'data'.",
+      },
+      400,
+      { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "JSON inválido", rejectedDetails: [], sourceLabel: "webhook" },
+    );
   }
 
-  const list = Array.isArray(payload)
-    ? payload
-    : Array.isArray((payload as { transactions?: unknown })?.transactions)
-      ? (payload as { transactions: unknown[] }).transactions
-      : null;
+  // Aceita 3 formatos: [ ... ], { transactions: [...] }, { data: [...] }
+  let list: unknown[] | null = null;
+  let envelopeUsed: "array" | "transactions" | "data" | null = null;
+  if (Array.isArray(payload)) {
+    list = payload;
+    envelopeUsed = "array";
+  } else if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    if (Array.isArray(obj.transactions)) {
+      list = obj.transactions;
+      envelopeUsed = "transactions";
+    } else if (Array.isArray(obj.data)) {
+      list = obj.data;
+      envelopeUsed = "data";
+    }
+  }
 
-  if (!list || list.length === 0) {
-    return finish({ error: "Envie um array de transactions ou { transactions: [...] }" }, 400, { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "payload vazio", rejectedDetails: [], sourceLabel: "webhook" });
+  if (!list) {
+    return finish(
+      {
+        error: "Formato de payload não reconhecido",
+        expected: ["[ ...transactions ]", "{ \"transactions\": [...] }", "{ \"data\": [...] }"],
+        received_type: Array.isArray(payload) ? "array" : typeof payload,
+      },
+      400,
+      { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "envelope inválido", rejectedDetails: [], sourceLabel: "webhook" },
+    );
+  }
+
+  if (list.length === 0) {
+    return finish(
+      { error: "Lista de transações vazia", envelope: envelopeUsed },
+      400,
+      { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "lista vazia", rejectedDetails: [], sourceLabel: "webhook" },
+    );
   }
   if (list.length > 500) {
-    return finish({ error: "Máximo de 500 transações por chamada" }, 413, { inserted: 0, skipped: 0, rejected: 0, total: list.length, error: "excedeu 500", rejectedDetails: [], sourceLabel: "webhook" });
+    return finish(
+      { error: "Máximo de 500 transações por chamada", received: list.length },
+      413,
+      { inserted: 0, skipped: 0, rejected: 0, total: list.length, error: "excedeu 500", rejectedDetails: [], sourceLabel: "webhook" },
+    );
   }
 
+  type RejectedItem = { index: number; errors: FieldError[] };
   const accepted: NormalizedTransaction[] = [];
-  const rejected: { index: number; error: string }[] = [];
+  const rejected: RejectedItem[] = [];
   list.forEach((raw, index) => {
     const result = normalizeTransaction((raw ?? {}) as IncomingTransaction);
     if (result.ok) accepted.push(result.tx);
-    else rejected.push({ index, error: result.error });
+    else rejected.push({ index, errors: result.errors });
   });
 
   // Rótulo de origem para o log: pega do primeiro item válido se existir.
