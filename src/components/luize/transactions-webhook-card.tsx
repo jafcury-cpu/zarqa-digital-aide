@@ -220,6 +220,28 @@ export function TransactionsWebhookCard() {
   const [customPayload, setCustomPayload] = useState("");
   const [customError, setCustomError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
+  // Mapeamentos já existentes — evita sugerir o que já está mapeado
+  const [knownMappings, setKnownMappings] = useState<Set<string>>(new Set());
+  // Categorias acabadas de mapear nesta sessão (para feedback inline)
+  const [justMapped, setJustMapped] = useState<Record<string, InternalCategory>>({});
+  // Categoria externa atualmente sendo persistida — evita cliques duplos
+  const [savingMapping, setSavingMapping] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    void supabase
+      .from("category_mappings")
+      .select("external_category")
+      .eq("user_id", user.id)
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        setKnownMappings(new Set(data.map((d) => d.external_category.toLowerCase())));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [user]);
 
   // Restaura último payload colado da sessão anterior
   useEffect(() => {
