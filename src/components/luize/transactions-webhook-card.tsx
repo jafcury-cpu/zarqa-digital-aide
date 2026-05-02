@@ -527,6 +527,51 @@ export function TransactionsWebhookCard() {
     setSavedAt(null);
   };
 
+  // Persiste um mapeamento direto da sugestão e atualiza o estado local
+  const saveMapping = async (external: string, internal: InternalCategory) => {
+    if (!user) {
+      toast({ variant: "destructive", title: "Faça login para mapear" });
+      return;
+    }
+    setSavingMapping(external);
+    const { error } = await supabase
+      .from("category_mappings")
+      .upsert(
+        { user_id: user.id, external_category: external, internal_category: internal },
+        { onConflict: "user_id,external_category" },
+      );
+    setSavingMapping(null);
+    if (error) {
+      toast({ variant: "destructive", title: "Falha ao salvar mapeamento", description: error.message });
+      return;
+    }
+    setKnownMappings((s) => new Set(s).add(external.toLowerCase()));
+    setJustMapped((m) => ({ ...m, [external.toLowerCase()]: internal }));
+    toast({ title: `“${external}” → ${internal}`, description: "Mapeamento salvo. Próximas importações serão classificadas." });
+  };
+
+  // Agrega categorias unmapped de todo o histórico (deduplicado, mantém só as ainda não resolvidas)
+  const unmappedSummary = useMemo(() => {
+    const seen = new Map<string, { external: string; suggested: InternalCategory; occurrences: number }>();
+    for (const entry of history) {
+      if (!entry.ok) continue;
+      const body = entry.body as { unmapped_categories?: string[] } | undefined;
+      const list = body?.unmapped_categories ?? [];
+      for (const ext of list) {
+        if (!ext) continue;
+        const key = ext.toLowerCase();
+        if (knownMappings.has(key)) continue;
+        const existing = seen.get(key);
+        if (existing) {
+          existing.occurrences += 1;
+        } else {
+          seen.set(key, { external: ext, suggested: suggestInternalCategory(ext), occurrences: 1 });
+        }
+      }
+    }
+    return Array.from(seen.values()).sort((a, b) => b.occurrences - a.occurrences);
+  }, [history, knownMappings]);
+
   const downloadFile = (content: string, filename: string, mime: string) => {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
