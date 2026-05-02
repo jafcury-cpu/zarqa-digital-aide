@@ -144,9 +144,26 @@ type IngestResult = {
 export function TransactionsWebhookCard() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [testing, setTesting] = useState<null | "sample" | "tesouro">(null);
+  const [testing, setTesting] = useState<null | "sample" | "tesouro" | "custom">(null);
   const [history, setHistory] = useState<IngestResult[]>([]);
   const [upsertMode, setUpsertMode] = useState(false);
+  const [customPayload, setCustomPayload] = useState("");
+  const [customError, setCustomError] = useState<string | null>(null);
+  const [savedAt, setSavedAt] = useState<string | null>(null);
+
+  // Restaura último payload colado da sessão anterior
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CUSTOM_PAYLOAD_STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as { payload?: string; savedAt?: string };
+        if (parsed.payload) setCustomPayload(parsed.payload);
+        if (parsed.savedAt) setSavedAt(parsed.savedAt);
+      }
+    } catch {
+      /* ignora corrupção */
+    }
+  }, []);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
   const endpointUrl = useMemo(
