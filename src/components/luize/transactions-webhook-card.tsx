@@ -10,6 +10,7 @@ import {
   History,
   RotateCw,
   ArrowRight,
+  Download,
 } from "lucide-react";
 import { SectionCard } from "@/components/luize/section-card";
 import { Button } from "@/components/ui/button";
@@ -271,6 +272,87 @@ export function TransactionsWebhookCard() {
     }
   };
 
+  const downloadFile = (content: string, filename: string, mime: string) => {
+    const blob = new Blob([content], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportHistory = (format: "json" | "csv") => {
+    if (history.length === 0) return;
+    const ts = new Date().toISOString().replace(/[:.]/g, "-").slice(0, 19);
+    if (format === "json") {
+      const payload = {
+        exported_at: new Date().toISOString(),
+        user_id: user?.id ?? null,
+        endpoint: endpointUrl,
+        count: history.length,
+        runs: history,
+      };
+      downloadFile(JSON.stringify(payload, null, 2), `luize-webhook-historico-${ts}.json`, "application/json");
+      toast({ title: "Histórico exportado (JSON)" });
+      return;
+    }
+    // CSV — uma linha por execução, com contagens e snippet do body
+    const headers = [
+      "id",
+      "at",
+      "label",
+      "ok",
+      "status",
+      "upsert",
+      "replay_of_id",
+      "tx_count",
+      "inserted",
+      "updated",
+      "skipped",
+      "rejected",
+      "unmapped_categories",
+      "body",
+    ];
+    const escape = (v: unknown) => {
+      const s = v === null || v === undefined ? "" : String(v);
+      return `"${s.replace(/"/g, '""').replace(/\r?\n/g, " ")}"`;
+    };
+    const rows = history.map((entry) => {
+      const body = entry.body as
+        | {
+            inserted?: number;
+            updated?: number;
+            skipped?: number;
+            rejected?: number;
+            unmapped_categories?: string[];
+          }
+        | undefined;
+      const txCount = Array.isArray(entry.payload.transactions) ? entry.payload.transactions.length : 0;
+      return [
+        entry.id,
+        entry.at,
+        entry.label,
+        entry.ok,
+        entry.status,
+        entry.upsert,
+        entry.replayOfId ?? "",
+        txCount,
+        body?.inserted ?? "",
+        body?.updated ?? "",
+        body?.skipped ?? "",
+        body?.rejected ?? "",
+        (body?.unmapped_categories ?? []).join("|"),
+        JSON.stringify(entry.body),
+      ].map(escape).join(",");
+    });
+    const csv = [headers.join(","), ...rows].join("\n");
+    downloadFile(csv, `luize-webhook-historico-${ts}.csv`, "text/csv;charset=utf-8");
+    toast({ title: "Histórico exportado (CSV)" });
+  };
+
   const curlPayload = upsertMode ? { ...SAMPLE_PAYLOAD, mode: "upsert" } : SAMPLE_PAYLOAD;
   const curlEndpoint = upsertMode ? `${endpointUrl}?upsert=true` : endpointUrl;
   const curlExample = `curl -X POST '${curlEndpoint}' \\
@@ -409,9 +491,31 @@ export function TransactionsWebhookCard() {
                 Histórico desta sessão
                 <Badge variant="secondary" className="text-[10px]">{history.length}/5</Badge>
               </div>
-              <Button type="button" variant="ghost" size="sm" onClick={() => setHistory([])}>
-                Limpar
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => exportHistory("json")}
+                  title="Baixar histórico desta sessão como JSON"
+                >
+                  <Download className="mr-1 size-3" /> JSON
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 px-2 text-[11px]"
+                  onClick={() => exportHistory("csv")}
+                  title="Baixar histórico desta sessão como CSV"
+                >
+                  <Download className="mr-1 size-3" /> CSV
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => setHistory([])}>
+                  Limpar
+                </Button>
+              </div>
             </div>
             <ul className="space-y-2">
               {history.map((entry) => {
