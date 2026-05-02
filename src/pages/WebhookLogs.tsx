@@ -272,6 +272,7 @@ const WebhookLogs = () => {
                     </TableCell>
                     <TableCell className="text-xs text-muted-foreground">{log.source}</TableCell>
                     <TableCell className="text-right font-mono text-success">{log.inserted_count}</TableCell>
+                    <TableCell className="text-right font-mono text-secondary">{log.updated_count ?? 0}</TableCell>
                     <TableCell className="text-right font-mono text-muted-foreground">{log.skipped_count}</TableCell>
                     <TableCell className="text-right font-mono text-warning">{log.rejected_count}</TableCell>
                     <TableCell className="text-right font-mono text-xs text-muted-foreground">
