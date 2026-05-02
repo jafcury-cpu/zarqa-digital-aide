@@ -86,8 +86,10 @@ function normalizeTransaction(raw: IncomingTransaction): { ok: true; tx: Normali
   const date = normalizeDate(raw.date);
   if (!date) return { ok: false, error: "date inválida (use YYYY-MM-DD ou DD/MM/YYYY)" };
 
-  const rawCategory = typeof raw.category === "string" ? raw.category.trim() : "Outros";
-  const category = ALLOWED_CATEGORIES.has(rawCategory) ? rawCategory : "Outros";
+  // Categoria: preservamos a string crua aqui; o mapeamento + fallback acontece
+  // depois (quando já temos o user_id e podemos consultar category_mappings).
+  const rawCategoryStr = typeof raw.category === "string" ? raw.category.trim() : "";
+  const category = rawCategoryStr.length > 0 ? rawCategoryStr : "Outros";
 
   const rawStatus = typeof raw.status === "string" ? raw.status.toLowerCase().trim() : "pago";
   const status = ALLOWED_STATUS.has(rawStatus) ? rawStatus : "pago";
@@ -101,6 +103,57 @@ function normalizeTransaction(raw: IncomingTransaction): { ok: true; tx: Normali
   const source = sourceRaw.length > 0 && sourceRaw.length <= 50 ? sourceRaw : "webhook";
 
   return { ok: true, tx: { description, amount, date, category, status, external_id, source } };
+}
+
+/**
+ * Resolve a categoria final para cada transação:
+ * 1. Se já é uma categoria interna válida → mantém.
+ * 2. Se existe mapeamento do usuário (case-insensitive) → usa o mapeamento.
+ * 3. Caso contrário → "Outros".
+ * Retorna também a lista de categorias externas que não tinham mapeamento, para diagnóstico.
+ */
+async function applyCategoryMappings(
+  client: SupabaseClient,
+  userId: string,
+  txs: NormalizedTransaction[],
+): Promise<{ unmapped: string[] }> {
+  const externalCandidates = Array.from(
+    new Set(
+      txs
+        .map((t) => t.category)
+        .filter((c) => !ALLOWED_CATEGORIES.has(c))
+        .map((c) => c.toLowerCase()),
+    ),
+  );
+
+  let mappingByLower = new Map<string, string>();
+  if (externalCandidates.length > 0) {
+    const { data: mappings } = await client
+      .from("category_mappings")
+      .select("external_category, internal_category")
+      .eq("user_id", userId);
+    mappingByLower = new Map(
+      (mappings ?? [])
+        .filter((m: { internal_category: string }) => ALLOWED_CATEGORIES.has(m.internal_category))
+        .map((m: { external_category: string; internal_category: string }) => [
+          m.external_category.toLowerCase(),
+          m.internal_category,
+        ]),
+    );
+  }
+
+  const unmappedSet = new Set<string>();
+  for (const tx of txs) {
+    if (ALLOWED_CATEGORIES.has(tx.category)) continue;
+    const mapped = mappingByLower.get(tx.category.toLowerCase());
+    if (mapped) {
+      tx.category = mapped;
+    } else {
+      unmappedSet.add(tx.category);
+      tx.category = "Outros";
+    }
+  }
+  return { unmapped: Array.from(unmappedSet) };
 }
 
 async function logCall(
