@@ -297,10 +297,14 @@ const WebhookLogs = () => {
           </DialogHeader>
           {selected && (
             <div className="space-y-4">
-              <div className="grid grid-cols-3 gap-3 text-sm">
+              <div className="grid grid-cols-4 gap-3 text-sm">
                 <div className="rounded-lg border border-border bg-panel p-3">
                   <p className="text-xs text-muted-foreground">Inseridas</p>
                   <p className="font-display text-2xl text-success">{selected.inserted_count}</p>
+                </div>
+                <div className="rounded-lg border border-border bg-panel p-3">
+                  <p className="text-xs text-muted-foreground">Atualizadas</p>
+                  <p className="font-display text-2xl text-secondary">{selected.updated_count ?? 0}</p>
                 </div>
                 <div className="rounded-lg border border-border bg-panel p-3">
                   <p className="text-xs text-muted-foreground">Ignoradas</p>
