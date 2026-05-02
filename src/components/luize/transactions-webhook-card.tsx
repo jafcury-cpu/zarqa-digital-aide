@@ -825,6 +825,23 @@ export function TransactionsWebhookCard() {
                             <RotateCw className="size-3" /> replay
                           </Badge>
                         )}
+                        <Badge
+                          variant="outline"
+                          className="inline-flex items-center gap-1 font-mono text-[10px]"
+                          title={entry.statusText ? `${entry.status} ${entry.statusText}` : `HTTP ${entry.status}`}
+                        >
+                          HTTP {entry.status || "—"}
+                          {entry.statusText && (
+                            <span className="text-muted-foreground">· {entry.statusText}</span>
+                          )}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className={`inline-flex items-center gap-1 font-mono text-[10px] ${latencyTone(entry.durationMs)}`}
+                          title="Latência total medida no cliente (rede + execução do edge function)"
+                        >
+                          ⏱ {formatDuration(entry.durationMs)}
+                        </Badge>
                         <span className="font-medium text-foreground">{entry.label}</span>
                       </div>
                       <div className="flex items-center gap-2">
