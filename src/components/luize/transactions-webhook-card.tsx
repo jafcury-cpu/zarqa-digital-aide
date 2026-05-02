@@ -391,6 +391,8 @@ export function TransactionsWebhookCard() {
     } catch { /* noop */ }
     setSavedAt(null);
   };
+
+  const downloadFile = (content: string, filename: string, mime: string) => {
     const blob = new Blob([content], { type: mime });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
