@@ -185,11 +185,31 @@ export function TransactionsWebhookCard() {
           </pre>
         </div>
 
+        {/* Modo upsert */}
+        <div className="flex items-start gap-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+          <Switch id="upsert-mode" checked={upsertMode} onCheckedChange={setUpsertMode} />
+          <div className="space-y-1">
+            <Label htmlFor="upsert-mode" className="cursor-pointer text-sm font-medium">
+              Modo upsert (atualizar existentes)
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Quando ligado, transações com <code className="rounded bg-muted px-1">external_id</code> já
+              existente são <strong>atualizadas</strong> em vez de ignoradas. Equivale a enviar{" "}
+              <code className="rounded bg-muted px-1">?upsert=true</code> na URL ou{" "}
+              <code className="rounded bg-muted px-1">{"{ mode: \"upsert\" }"}</code> no body.
+            </p>
+          </div>
+        </div>
+
         {/* Test button */}
         <div className="flex flex-wrap items-center gap-3 border-t border-border/60 pt-4">
           <Button type="button" onClick={handleTest} disabled={testing || !user}>
             <PlayCircle className="mr-2 size-4" />
-            {testing ? "Enviando..." : "Testar com payload de exemplo"}
+            {testing
+              ? "Enviando..."
+              : upsertMode
+                ? "Testar (upsert)"
+                : "Testar com payload de exemplo"}
           </Button>
           <Button type="button" variant="outline" asChild>
             <Link to="/configuracoes/webhook-logs">
