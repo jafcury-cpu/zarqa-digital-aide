@@ -1013,6 +1013,78 @@ export function TransactionsWebhookCard() {
           </div>
         )}
 
+        {/* Resumo de categorias sem mapeamento + ações rápidas */}
+        {unmappedSummary.length > 0 && (
+          <div className="space-y-3 rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <Wand2 className="size-4 text-amber-400" />
+                Categorias sem mapeamento
+                <Badge variant="outline" className="text-[10px]">{unmappedSummary.length}</Badge>
+              </div>
+              <Button type="button" variant="ghost" size="sm" asChild className="h-7 px-2 text-[11px]">
+                <a href="#mapeamentos">
+                  <Tags className="mr-1 size-3" /> Abrir mapeamentos
+                  <ExternalLink className="ml-1 size-3" />
+                </a>
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Sugerimos uma categoria interna com base no nome. Ajuste se quiser e salve — o mapeamento vale para todas as próximas importações.
+            </p>
+            <ul className="space-y-1.5">
+              {unmappedSummary.map((item) => {
+                const key = item.external.toLowerCase();
+                const persistedAs = justMapped[key];
+                const isSaving = savingMapping === item.external;
+                return (
+                  <li
+                    key={key}
+                    className="flex flex-wrap items-center gap-2 rounded border border-border/40 bg-background/40 px-2 py-1.5 text-xs"
+                  >
+                    <span className="font-mono text-foreground" title={`Apareceu em ${item.occurrences} execução(ões)`}>
+                      {item.external}
+                    </span>
+                    {item.occurrences > 1 && (
+                      <Badge variant="secondary" className="text-[10px]">×{item.occurrences}</Badge>
+                    )}
+                    <ArrowRight className="size-3 text-muted-foreground" />
+                    {persistedAs ? (
+                      <Badge variant="default" className="inline-flex items-center gap-1 text-[10px]">
+                        <CheckCircle2 className="size-3" /> mapeado para {persistedAs}
+                      </Badge>
+                    ) : (
+                      <>
+                        <select
+                          defaultValue={item.suggested}
+                          onChange={(e) => {
+                            item.suggested = e.target.value as InternalCategory;
+                          }}
+                          className="h-7 rounded border border-border/60 bg-muted/40 px-1.5 font-mono text-[11px]"
+                        >
+                          {INTERNAL_CATEGORIES.map((c) => (
+                            <option key={c} value={c}>{c}</option>
+                          ))}
+                        </select>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="ml-auto h-7 px-2 text-[11px]"
+                          disabled={isSaving || savingMapping !== null}
+                          onClick={() => saveMapping(item.external, item.suggested)}
+                        >
+                          {isSaving ? "Salvando..." : "Salvar mapeamento"}
+                        </Button>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
 
         <p className="text-xs text-muted-foreground">
           As transações importadas aparecem em <strong>Financeiro</strong> e contam para o cockpit. Reenviar com o mesmo{" "}
