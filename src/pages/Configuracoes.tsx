@@ -440,8 +440,9 @@ const Configuracoes = () => {
       <div className="space-y-4 xl:col-span-2">
         <TransactionsWebhookCard />
         <WebhookSetupGuideCard />
-        <CategoryMappingsCard />
-      </div>
+        <div id="mapeamentos" className="scroll-mt-24">
+          <CategoryMappingsCard />
+        </div>
     </div>
   );
 };
