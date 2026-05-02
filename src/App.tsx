@@ -82,6 +82,7 @@ const App = () => (
                     <Route path="/contatos" element={<Contatos />} />
                     <Route path="/comunicacoes" element={<Comunicacoes />} />
                     <Route path="/configuracoes" element={<Configuracoes />} />
+                    <Route path="/configuracoes/webhook-logs" element={<WebhookLogs />} />
                     <Route path="/erros" element={<Erros />} />
                   </Route>
                   <Route path="*" element={<NotFound />} />
