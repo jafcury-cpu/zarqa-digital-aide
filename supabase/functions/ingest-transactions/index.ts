@@ -440,43 +440,88 @@ serve(async (req) => {
     existingExternalIds = new Set((existing ?? []).map((r: { external_id: string }) => r.external_id));
   }
 
-  const toInsert = accepted
-    .filter((t) => !t.external_id || !existingExternalIds.has(t.external_id))
-    .map((t) => ({ ...t, user_id: userId }));
+  // Separa novas vs já existentes (por external_id).
+  const newOnes = accepted.filter((t) => !t.external_id || !existingExternalIds.has(t.external_id));
+  const duplicates = accepted.filter((t) => t.external_id && existingExternalIds.has(t.external_id));
 
-  const skipped = accepted.length - toInsert.length;
+  // No modo insert (default), duplicados são ignorados (skipped).
+  // No modo upsert, duplicados são atualizados.
+  const toInsert = newOnes.map((t) => ({ ...t, user_id: userId }));
+  const skipped = mode === "upsert" ? 0 : duplicates.length;
 
-  if (toInsert.length === 0) {
-    return finish(
-      { inserted: 0, skipped, rejected, message: "Todas as transações já existiam (external_id)" },
-      200,
-      { inserted: 0, skipped, rejected: rejected.length, total: list.length, error: null, rejectedDetails: rejected, sourceLabel },
-    );
+  let insertedRows: Array<{ id: string; external_id: string | null }> = [];
+  let updatedCount = 0;
+
+  if (toInsert.length > 0) {
+    const { data, error } = await dbClient
+      .from("transactions")
+      .insert(toInsert)
+      .select("id, external_id");
+    if (error) {
+      console.error("[ingest-transactions] insert error", error);
+      return finish(
+        { error: error.message, rejected, mode },
+        500,
+        { inserted: 0, updated: 0, skipped, rejected: rejected.length, total: list.length, error: error.message, rejectedDetails: rejected, sourceLabel },
+      );
+    }
+    insertedRows = data ?? [];
   }
 
-  const { data: inserted, error: insertError } = await dbClient
-    .from("transactions")
-    .insert(toInsert)
-    .select("id, external_id");
+  if (mode === "upsert" && duplicates.length > 0) {
+    // Update por external_id (escopado por user_id). Faz uma chamada por item para
+    // permitir valores diferentes em cada update — volume típico é baixo (< 500/req).
+    for (const tx of duplicates) {
+      const { error: updErr } = await dbClient
+        .from("transactions")
+        .update({
+          description: tx.description,
+          amount: tx.amount,
+          date: tx.date,
+          category: tx.category,
+          status: tx.status,
+          source: tx.source,
+        })
+        .eq("user_id", userId)
+        .eq("external_id", tx.external_id!);
+      if (updErr) {
+        console.error("[ingest-transactions] update error", updErr);
+        return finish(
+          { error: `Falha ao atualizar external_id=${tx.external_id}: ${updErr.message}`, rejected, mode, inserted: insertedRows.length, updated: updatedCount },
+          500,
+          { inserted: insertedRows.length, updated: updatedCount, skipped: 0, rejected: rejected.length, total: list.length, error: updErr.message, rejectedDetails: rejected, sourceLabel },
+        );
+      }
+      updatedCount += 1;
+    }
+  }
 
-  if (insertError) {
-    console.error("[ingest-transactions] insert error", insertError);
+  if (insertedRows.length === 0 && updatedCount === 0) {
     return finish(
-      { error: insertError.message, rejected },
-      500,
-      { inserted: 0, skipped, rejected: rejected.length, total: list.length, error: insertError.message, rejectedDetails: rejected, sourceLabel },
+      {
+        inserted: 0,
+        updated: 0,
+        skipped,
+        rejected,
+        mode,
+        message: "Todas as transações já existiam (external_id) — use mode=upsert para atualizá-las.",
+      },
+      200,
+      { inserted: 0, updated: 0, skipped, rejected: rejected.length, total: list.length, error: null, rejectedDetails: rejected, sourceLabel },
     );
   }
 
   return finish(
     {
-      inserted: inserted?.length ?? 0,
+      inserted: insertedRows.length,
+      updated: updatedCount,
       skipped,
       rejected,
       unmapped_categories: unmapped,
-      ids: inserted?.map((r: { id: string }) => r.id) ?? [],
+      mode,
+      ids: insertedRows.map((r) => r.id),
     },
     200,
-    { inserted: inserted?.length ?? 0, skipped, rejected: rejected.length, total: list.length, error: null, rejectedDetails: rejected, sourceLabel },
+    { inserted: insertedRows.length, updated: updatedCount, skipped, rejected: rejected.length, total: list.length, error: null, rejectedDetails: rejected, sourceLabel },
   );
 });
