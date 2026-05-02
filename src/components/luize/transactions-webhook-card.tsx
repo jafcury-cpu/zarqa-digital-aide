@@ -182,6 +182,12 @@ export function TransactionsWebhookCard() {
             <PlayCircle className="mr-2 size-4" />
             {testing ? "Enviando..." : "Testar com payload de exemplo"}
           </Button>
+          <Button type="button" variant="outline" asChild>
+            <Link to="/configuracoes/webhook-logs">
+              <ScrollText className="mr-2 size-4" />
+              Ver logs e histórico
+            </Link>
+          </Button>
           {result && (
             <Badge
               variant={result.ok ? "default" : "destructive"}
