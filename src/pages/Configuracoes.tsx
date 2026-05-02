@@ -36,6 +36,7 @@ import {
 } from "@/lib/debug-mode";
 import { TransactionsWebhookCard } from "@/components/luize/transactions-webhook-card";
 import { CategoryMappingsCard } from "@/components/luize/category-mappings-card";
+import { WebhookSetupGuideCard } from "@/components/luize/webhook-setup-guide-card";
 
 function validateWebhookUrl(value: string) {
   if (!value.trim()) return null;
@@ -436,8 +437,9 @@ const Configuracoes = () => {
         </div>
       </SectionCard>
 
-      <div className="xl:col-span-2">
+      <div className="space-y-4 xl:col-span-2">
         <TransactionsWebhookCard />
+        <WebhookSetupGuideCard />
         <CategoryMappingsCard />
       </div>
     </div>
