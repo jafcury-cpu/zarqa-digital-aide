@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Copy, PlayCircle, CheckCircle2, AlertCircle, ScrollText, Sparkles, History } from "lucide-react";
+import {
+  Copy,
+  PlayCircle,
+  CheckCircle2,
+  AlertCircle,
+  ScrollText,
+  Sparkles,
+  History,
+  RotateCw,
+  ArrowRight,
+} from "lucide-react";
 import { SectionCard } from "@/components/luize/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -105,12 +115,22 @@ function buildTesouroBrilhantePayload() {
   };
 }
 
+type IngestPayload = {
+  transactions: unknown[];
+  mode?: "upsert";
+};
+
 type IngestResult = {
   ok: boolean;
   status: number;
   body: unknown;
   label: string;
   at: string;
+  payload: IngestPayload;
+  upsert: boolean;
+  /** id of the previous run this one replays, if any — used to compute diffs */
+  replayOfId?: string;
+  id: string;
 };
 
 
@@ -127,6 +147,8 @@ export function TransactionsWebhookCard() {
     [projectId],
   );
 
+  const [replayingId, setReplayingId] = useState<string | null>(null);
+
   const samplePayloadStr = useMemo(() => JSON.stringify(SAMPLE_PAYLOAD, null, 2), []);
 
   const copy = async (value: string, label: string) => {
@@ -138,6 +160,78 @@ export function TransactionsWebhookCard() {
     }
   };
 
+  const newId = () =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  const sendIngest = async (params: {
+    payload: IngestPayload;
+    upsert: boolean;
+    label: string;
+    replayOfId?: string;
+  }) => {
+    const { payload, upsert, label, replayOfId } = params;
+    const at = new Date().toISOString();
+    const id = newId();
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ingest-transactions", { body: payload });
+      if (error) {
+        const entry: IngestResult = {
+          ok: false,
+          status: 0,
+          body: { error: error.message },
+          label,
+          at,
+          payload,
+          upsert,
+          replayOfId,
+          id,
+        };
+        setHistory((h) => [entry, ...h].slice(0, 5));
+        toast({ variant: "destructive", title: "Falha no teste", description: error.message });
+      } else {
+        const inserted = (data as { inserted?: number })?.inserted ?? 0;
+        const updated = (data as { updated?: number })?.updated ?? 0;
+        const skipped = (data as { skipped?: number })?.skipped ?? 0;
+        const entry: IngestResult = {
+          ok: true,
+          status: 200,
+          body: data,
+          label,
+          at,
+          payload,
+          upsert,
+          replayOfId,
+          id,
+        };
+        setHistory((h) => [entry, ...h].slice(0, 5));
+        toast({
+          title: replayOfId ? "Replay respondeu" : "Webhook respondeu",
+          description: upsert
+            ? `Inseridas ${inserted}, atualizadas ${updated}, ignoradas ${skipped}.`
+            : `Inseridas ${inserted}, ignoradas ${skipped}.`,
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      const entry: IngestResult = {
+        ok: false,
+        status: 0,
+        body: { error: message },
+        label,
+        at,
+        payload,
+        upsert,
+        replayOfId,
+        id,
+      };
+      setHistory((h) => [entry, ...h].slice(0, 5));
+      toast({ variant: "destructive", title: "Falha no teste", description: message });
+    }
+  };
+
   const runTest = async (variant: "sample" | "tesouro") => {
     if (!user) {
       toast({ variant: "destructive", title: "Faça login para testar" });
@@ -145,36 +239,35 @@ export function TransactionsWebhookCard() {
     }
     setTesting(variant);
     const basePayload = variant === "tesouro" ? buildTesouroBrilhantePayload() : SAMPLE_PAYLOAD;
-    const payload = upsertMode ? { ...basePayload, mode: "upsert" } : basePayload;
+    const payload: IngestPayload = upsertMode ? { ...basePayload, mode: "upsert" } : basePayload;
     const label =
       variant === "tesouro"
         ? `Tesouro Brilhante · ${basePayload.transactions.length} txs${upsertMode ? " · upsert" : ""}`
         : `Payload de exemplo${upsertMode ? " · upsert" : ""}`;
-    const at = new Date().toISOString();
-
     try {
-      const { data, error } = await supabase.functions.invoke("ingest-transactions", { body: payload });
-      if (error) {
-        setHistory((h) => [{ ok: false, status: 0, body: { error: error.message }, label, at }, ...h].slice(0, 5));
-        toast({ variant: "destructive", title: "Falha no teste", description: error.message });
-      } else {
-        const inserted = (data as { inserted?: number })?.inserted ?? 0;
-        const updated = (data as { updated?: number })?.updated ?? 0;
-        const skipped = (data as { skipped?: number })?.skipped ?? 0;
-        setHistory((h) => [{ ok: true, status: 200, body: data, label, at }, ...h].slice(0, 5));
-        toast({
-          title: "Webhook respondeu",
-          description: upsertMode
-            ? `Inseridas ${inserted}, atualizadas ${updated}, ignoradas ${skipped}.`
-            : `Inseridas ${inserted}, ignoradas ${skipped}.`,
-        });
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro desconhecido";
-      setHistory((h) => [{ ok: false, status: 0, body: { error: message }, label, at }, ...h].slice(0, 5));
-      toast({ variant: "destructive", title: "Falha no teste", description: message });
+      await sendIngest({ payload, upsert: upsertMode, label });
     } finally {
       setTesting(null);
+    }
+  };
+
+  const replayEntry = async (entry: IngestResult) => {
+    if (!user) {
+      toast({ variant: "destructive", title: "Faça login para repetir" });
+      return;
+    }
+    setReplayingId(entry.id);
+    const count = Array.isArray(entry.payload.transactions) ? entry.payload.transactions.length : 0;
+    const label = `↻ Replay · ${count} txs${entry.upsert ? " · upsert" : ""}`;
+    try {
+      await sendIngest({
+        payload: entry.payload,
+        upsert: entry.upsert,
+        label,
+        replayOfId: entry.id,
+      });
+    } finally {
+      setReplayingId(null);
     }
   };
 
@@ -336,10 +429,28 @@ export function TransactionsWebhookCard() {
                 const skipped = body?.skipped ?? 0;
                 const rejected = body?.rejected ?? 0;
                 const unmapped = body?.unmapped_categories ?? [];
+                const isReplaying = replayingId === entry.id;
+
+                // Compara este replay com a execução original para destacar mudança do upsert
+                const original = entry.replayOfId
+                  ? history.find((h) => h.id === entry.replayOfId)
+                  : undefined;
+                const originalBody = original?.body as
+                  | { inserted?: number; updated?: number; skipped?: number }
+                  | undefined;
+                const diff = entry.ok && original?.ok
+                  ? {
+                      inserted: inserted - (originalBody?.inserted ?? 0),
+                      updated: updated - (originalBody?.updated ?? 0),
+                      skipped: skipped - (originalBody?.skipped ?? 0),
+                    }
+                  : null;
+                const fmtDelta = (n: number) => (n > 0 ? `+${n}` : `${n}`);
+
                 return (
-                  <li key={entry.at} className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs">
+                  <li key={entry.id} className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <Badge
                           variant={entry.ok ? "default" : "destructive"}
                           className="inline-flex items-center gap-1.5"
@@ -347,11 +458,30 @@ export function TransactionsWebhookCard() {
                           {entry.ok ? <CheckCircle2 className="size-3" /> : <AlertCircle className="size-3" />}
                           {entry.ok ? "Sucesso" : "Falhou"}
                         </Badge>
+                        {entry.replayOfId && (
+                          <Badge variant="outline" className="inline-flex items-center gap-1 text-[10px]">
+                            <RotateCw className="size-3" /> replay
+                          </Badge>
+                        )}
                         <span className="font-medium text-foreground">{entry.label}</span>
                       </div>
-                      <span className="font-mono text-[10px] text-muted-foreground">
-                        {new Date(entry.at).toLocaleTimeString("pt-BR")}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] text-muted-foreground">
+                          {new Date(entry.at).toLocaleTimeString("pt-BR")}
+                        </span>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-[11px]"
+                          onClick={() => replayEntry(entry)}
+                          disabled={replayingId !== null || testing !== null || !user}
+                          title="Reenvia exatamente o mesmo payload"
+                        >
+                          <RotateCw className={`mr-1 size-3 ${isReplaying ? "animate-spin" : ""}`} />
+                          {isReplaying ? "Repetindo..." : "Repetir teste"}
+                        </Button>
+                      </div>
                     </div>
                     {entry.ok && (
                       <div className="mt-2 flex flex-wrap gap-1.5">
@@ -371,12 +501,29 @@ export function TransactionsWebhookCard() {
                         )}
                       </div>
                     )}
+                    {diff && (diff.inserted !== 0 || diff.updated !== 0 || diff.skipped !== 0) && (
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5 rounded border border-accent-blue/30 bg-accent-blue/5 px-2 py-1.5 text-[10px] text-muted-foreground">
+                        <ArrowRight className="size-3 text-accent-blue" />
+                        <span className="font-medium text-foreground">vs. original:</span>
+                        <span className={diff.inserted < 0 ? "text-accent-green" : diff.inserted > 0 ? "text-amber-400" : ""}>
+                          inseridas {fmtDelta(diff.inserted)}
+                        </span>
+                        <span className={diff.updated > 0 ? "text-accent-blue" : ""}>
+                          · atualizadas {fmtDelta(diff.updated)}
+                        </span>
+                        <span>· ignoradas {fmtDelta(diff.skipped)}</span>
+                        <Badge variant="outline" className="ml-auto text-[10px]">
+                          upsert {entry.upsert ? "ON" : "OFF"}
+                        </Badge>
+                      </div>
+                    )}
                     <pre className="mt-2 max-h-32 overflow-auto rounded border border-border/40 bg-background/40 p-2 font-mono text-[10px] leading-relaxed">
                       {JSON.stringify(entry.body, null, 2)}
                     </pre>
                   </li>
                 );
               })}
+
             </ul>
           </div>
         )}
