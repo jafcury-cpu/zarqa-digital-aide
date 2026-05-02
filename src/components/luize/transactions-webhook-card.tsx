@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Copy, PlayCircle, CheckCircle2, AlertCircle } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Copy, PlayCircle, CheckCircle2, AlertCircle, ScrollText } from "lucide-react";
 import { SectionCard } from "@/components/luize/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -180,6 +181,12 @@ export function TransactionsWebhookCard() {
           <Button type="button" onClick={handleTest} disabled={testing || !user}>
             <PlayCircle className="mr-2 size-4" />
             {testing ? "Enviando..." : "Testar com payload de exemplo"}
+          </Button>
+          <Button type="button" variant="outline" asChild>
+            <Link to="/configuracoes/webhook-logs">
+              <ScrollText className="mr-2 size-4" />
+              Ver logs e histórico
+            </Link>
           </Button>
           {result && (
             <Badge

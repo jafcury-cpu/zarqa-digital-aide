@@ -453,6 +453,57 @@ export type Database = {
           },
         ]
       }
+      ingest_logs: {
+        Row: {
+          auth_mode: string
+          created_at: string
+          duration_ms: number | null
+          error_message: string | null
+          id: string
+          inserted_count: number
+          rejected_count: number
+          rejected_details: Json | null
+          request_id: string | null
+          skipped_count: number
+          source: string
+          status_code: number
+          total_received: number
+          user_id: string
+        }
+        Insert: {
+          auth_mode: string
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          inserted_count?: number
+          rejected_count?: number
+          rejected_details?: Json | null
+          request_id?: string | null
+          skipped_count?: number
+          source?: string
+          status_code: number
+          total_received?: number
+          user_id: string
+        }
+        Update: {
+          auth_mode?: string
+          created_at?: string
+          duration_ms?: number | null
+          error_message?: string | null
+          id?: string
+          inserted_count?: number
+          rejected_count?: number
+          rejected_details?: Json | null
+          request_id?: string | null
+          skipped_count?: number
+          source?: string
+          status_code?: number
+          total_received?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
       messages: {
         Row: {
           content: string
