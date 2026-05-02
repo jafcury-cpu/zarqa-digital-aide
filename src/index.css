@@ -218,3 +218,19 @@
   backdrop-filter: blur(16px);
   border-radius: 1.5rem;
 }
+
+/* Faixa lateral de destaque herdada do Tesouro Brilhante — usada em
+   cartões de módulo dentro do Financeiro para reforçar a identidade. */
+.finance-theme .finance-stripe {
+  position: relative;
+  overflow: hidden;
+}
+
+.finance-theme .finance-stripe::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 4px;
+  background: linear-gradient(180deg, hsl(35 96% 63%), hsl(188 72% 23%));
+  border-radius: 999px;
+}
