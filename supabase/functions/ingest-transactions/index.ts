@@ -76,15 +76,77 @@ function normalizeAmount(value: unknown): number | null {
   return null;
 }
 
-function normalizeTransaction(raw: IncomingTransaction): { ok: true; tx: NormalizedTransaction } | { ok: false; error: string } {
+type FieldError = { field: string; error: string; received?: unknown };
+
+/** Limita o eco do valor recebido em respostas de erro (evita vazar payload gigante). */
+function preview(value: unknown): unknown {
+  if (value === null || value === undefined) return value;
+  if (typeof value === "string") return value.length > 120 ? value.slice(0, 120) + "…" : value;
+  if (typeof value === "number" || typeof value === "boolean") return value;
+  try {
+    const json = JSON.stringify(value);
+    return json.length > 120 ? json.slice(0, 120) + "…" : JSON.parse(json);
+  } catch {
+    return String(value).slice(0, 120);
+  }
+}
+
+function normalizeTransaction(
+  raw: IncomingTransaction,
+): { ok: true; tx: NormalizedTransaction } | { ok: false; errors: FieldError[] } {
+  const errors: FieldError[] = [];
+
+  if (raw === null || typeof raw !== "object" || Array.isArray(raw)) {
+    return { ok: false, errors: [{ field: "_root", error: "item deve ser um objeto", received: preview(raw) }] };
+  }
+
   const description = typeof raw.description === "string" ? raw.description.trim() : "";
-  if (!description || description.length > 500) return { ok: false, error: "description inválida (1-500 chars)" };
+  if (!description) {
+    errors.push({ field: "description", error: "obrigatória (string não vazia)", received: preview(raw.description) });
+  } else if (description.length > 500) {
+    errors.push({ field: "description", error: "máximo 500 caracteres", received: `${description.length} chars` });
+  }
 
   const amount = normalizeAmount(raw.amount);
-  if (amount === null) return { ok: false, error: "amount inválido" };
+  if (amount === null) {
+    errors.push({
+      field: "amount",
+      error: "deve ser número ou string numérica (ex.: -342.90, \"R$ 1.234,56\")",
+      received: preview(raw.amount),
+    });
+  }
 
   const date = normalizeDate(raw.date);
-  if (!date) return { ok: false, error: "date inválida (use YYYY-MM-DD ou DD/MM/YYYY)" };
+  if (!date) {
+    errors.push({
+      field: "date",
+      error: "use YYYY-MM-DD, DD/MM/YYYY ou ISO 8601",
+      received: preview(raw.date),
+    });
+  }
+
+  if (raw.status !== undefined && typeof raw.status === "string") {
+    const s = raw.status.toLowerCase().trim();
+    if (s.length > 0 && !ALLOWED_STATUS.has(s)) {
+      errors.push({
+        field: "status",
+        error: `valores aceitos: ${Array.from(ALLOWED_STATUS).join(", ")}`,
+        received: preview(raw.status),
+      });
+    }
+  }
+
+  if (raw.external_id !== undefined && raw.external_id !== null) {
+    if (typeof raw.external_id !== "string" || raw.external_id.length > 200) {
+      errors.push({
+        field: "external_id",
+        error: "deve ser string de até 200 caracteres",
+        received: preview(raw.external_id),
+      });
+    }
+  }
+
+  if (errors.length > 0) return { ok: false, errors };
 
   // Categoria: preservamos a string crua aqui; o mapeamento + fallback acontece
   // depois (quando já temos o user_id e podemos consultar category_mappings).
@@ -95,14 +157,14 @@ function normalizeTransaction(raw: IncomingTransaction): { ok: true; tx: Normali
   const status = ALLOWED_STATUS.has(rawStatus) ? rawStatus : "pago";
 
   const externalIdRaw = raw.external_id;
-  const external_id = typeof externalIdRaw === "string" && externalIdRaw.trim().length > 0 && externalIdRaw.length <= 200
+  const external_id = typeof externalIdRaw === "string" && externalIdRaw.trim().length > 0
     ? externalIdRaw.trim()
     : null;
 
   const sourceRaw = typeof raw.source === "string" ? raw.source.trim() : "webhook";
   const source = sourceRaw.length > 0 && sourceRaw.length <= 50 ? sourceRaw : "webhook";
 
-  return { ok: true, tx: { description, amount, date, category, status, external_id, source } };
+  return { ok: true, tx: { description, amount: amount!, date: date!, category, status, external_id, source } };
 }
 
 /**
@@ -274,28 +336,67 @@ serve(async (req) => {
   try {
     payload = await req.json();
   } catch {
-    return finish({ error: "JSON inválido" }, 400, { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "JSON inválido", rejectedDetails: [], sourceLabel: "webhook" });
+    return finish(
+      {
+        error: "JSON inválido",
+        hint: "Envie um array direto [...] ou um objeto com a chave 'transactions' ou 'data'.",
+      },
+      400,
+      { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "JSON inválido", rejectedDetails: [], sourceLabel: "webhook" },
+    );
   }
 
-  const list = Array.isArray(payload)
-    ? payload
-    : Array.isArray((payload as { transactions?: unknown })?.transactions)
-      ? (payload as { transactions: unknown[] }).transactions
-      : null;
+  // Aceita 3 formatos: [ ... ], { transactions: [...] }, { data: [...] }
+  let list: unknown[] | null = null;
+  let envelopeUsed: "array" | "transactions" | "data" | null = null;
+  if (Array.isArray(payload)) {
+    list = payload;
+    envelopeUsed = "array";
+  } else if (payload && typeof payload === "object") {
+    const obj = payload as Record<string, unknown>;
+    if (Array.isArray(obj.transactions)) {
+      list = obj.transactions;
+      envelopeUsed = "transactions";
+    } else if (Array.isArray(obj.data)) {
+      list = obj.data;
+      envelopeUsed = "data";
+    }
+  }
 
-  if (!list || list.length === 0) {
-    return finish({ error: "Envie um array de transactions ou { transactions: [...] }" }, 400, { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "payload vazio", rejectedDetails: [], sourceLabel: "webhook" });
+  if (!list) {
+    return finish(
+      {
+        error: "Formato de payload não reconhecido",
+        expected: ["[ ...transactions ]", "{ \"transactions\": [...] }", "{ \"data\": [...] }"],
+        received_type: Array.isArray(payload) ? "array" : typeof payload,
+      },
+      400,
+      { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "envelope inválido", rejectedDetails: [], sourceLabel: "webhook" },
+    );
+  }
+
+  if (list.length === 0) {
+    return finish(
+      { error: "Lista de transações vazia", envelope: envelopeUsed },
+      400,
+      { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "lista vazia", rejectedDetails: [], sourceLabel: "webhook" },
+    );
   }
   if (list.length > 500) {
-    return finish({ error: "Máximo de 500 transações por chamada" }, 413, { inserted: 0, skipped: 0, rejected: 0, total: list.length, error: "excedeu 500", rejectedDetails: [], sourceLabel: "webhook" });
+    return finish(
+      { error: "Máximo de 500 transações por chamada", received: list.length },
+      413,
+      { inserted: 0, skipped: 0, rejected: 0, total: list.length, error: "excedeu 500", rejectedDetails: [], sourceLabel: "webhook" },
+    );
   }
 
+  type RejectedItem = { index: number; errors: FieldError[] };
   const accepted: NormalizedTransaction[] = [];
-  const rejected: { index: number; error: string }[] = [];
+  const rejected: RejectedItem[] = [];
   list.forEach((raw, index) => {
     const result = normalizeTransaction((raw ?? {}) as IncomingTransaction);
     if (result.ok) accepted.push(result.tx);
-    else rejected.push({ index, error: result.error });
+    else rejected.push({ index, errors: result.errors });
   });
 
   // Rótulo de origem para o log: pega do primeiro item válido se existir.

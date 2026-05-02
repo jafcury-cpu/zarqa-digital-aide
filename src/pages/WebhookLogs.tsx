@@ -319,8 +319,47 @@ const WebhookLogs = () => {
                   <p className="mb-2 text-xs uppercase tracking-wider text-muted-foreground">
                     Itens rejeitados ({selected.rejected_details.length})
                   </p>
-                  <div className="max-h-64 overflow-auto rounded-lg border border-border bg-panel p-3">
-                    <pre className="text-xs">{JSON.stringify(selected.rejected_details, null, 2)}</pre>
+                  <div className="max-h-72 space-y-2 overflow-auto rounded-lg border border-border bg-panel p-3">
+                    {(selected.rejected_details as Array<Record<string, unknown>>).map((item, i) => {
+                      const idx = typeof item.index === "number" ? item.index : i;
+                      const errs = Array.isArray(item.errors)
+                        ? (item.errors as Array<{ field?: string; error?: string; received?: unknown }>)
+                        : typeof item.error === "string"
+                          ? [{ field: "_legacy", error: item.error as string }]
+                          : [];
+                      return (
+                        <div key={i} className="rounded-md border border-border/60 bg-muted/30 p-2 text-xs">
+                          <div className="mb-1 flex items-center gap-2">
+                            <Badge variant="outline" className="font-mono">
+                              #{idx}
+                            </Badge>
+                            <span className="text-muted-foreground">
+                              {errs.length} {errs.length === 1 ? "erro" : "erros"}
+                            </span>
+                          </div>
+                          <ul className="space-y-1">
+                            {errs.map((e, j) => (
+                              <li key={j} className="flex flex-wrap items-baseline gap-2">
+                                <code className="rounded bg-background px-1.5 py-0.5 text-warning">
+                                  {e.field ?? "—"}
+                                </code>
+                                <span>{e.error}</span>
+                                {e.received !== undefined && (
+                                  <span className="text-muted-foreground">
+                                    recebido:{" "}
+                                    <code className="text-[10px]">
+                                      {typeof e.received === "string"
+                                        ? `"${e.received}"`
+                                        : JSON.stringify(e.received)}
+                                    </code>
+                                  </span>
+                                )}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
               )}
