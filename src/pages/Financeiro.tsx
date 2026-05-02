@@ -811,23 +811,7 @@ const Financeiro = () => {
           </TabsContent>
 
           <TabsContent value="conciliacao">
-            <div className="mb-3 flex justify-end">
-              <ReconciliationFormDialog onSaved={reloadDynamic} />
-            </div>
-            <div className="grid gap-4 md:grid-cols-3">
-              {reconciliation.map((row) => (
-                <div key={row.id} className="rounded-2xl border border-border bg-panel-elevated p-5">
-                  <div className="flex items-start justify-between">
-                    <p className="text-sm font-semibold text-foreground">{row.institution}</p>
-                    <ReconciliationFormDialog row={row} onSaved={reloadDynamic} />
-                  </div>
-                  <p className="mt-2 font-display text-2xl text-foreground">{row.progress_pct}%</p>
-                  <Progress value={row.progress_pct} className="mt-2 h-2 bg-muted" />
-                  <p className="mt-2 text-xs text-muted-foreground">Fase: {row.current_phase}</p>
-                  {row.note && <p className="mt-1 text-xs text-muted-foreground">{row.note}</p>}
-                </div>
-              ))}
-            </div>
+            <ReconciliationOverview rows={reconciliation} onChanged={reloadDynamic} />
           </TabsContent>
         </Tabs>
       </SectionCard>
