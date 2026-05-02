@@ -1163,11 +1163,11 @@ export function TransactionsWebhookCard() {
 
         {/* Resumo de categorias sem mapeamento + ações rápidas */}
         {unmappedSummary.length > 0 && (() => {
-          const pendingItems = unmappedSummary.filter((it) => !justMapped[it.external.toLowerCase()]);
-          const allSelected = pendingItems.length > 0 && pendingItems.every((it) => selectedKeys.has(it.external.toLowerCase()));
+          const pendingItems = unmappedSummary.filter((it) => !justMapped[categoryDedupKey(it.external)]);
+          const allSelected = pendingItems.length > 0 && pendingItems.every((it) => selectedKeys.has(categoryDedupKey(it.external)));
           const selectedCount = selectedKeys.size;
           const getCategory = (item: typeof unmappedSummary[number]) =>
-            overrides[item.external.toLowerCase()] ?? item.suggested;
+            overrides[categoryDedupKey(item.external)] ?? item.suggested;
           const toggleSelect = (key: string) => {
             setSelectedKeys((s) => {
               const next = new Set(s);
@@ -1180,7 +1180,7 @@ export function TransactionsWebhookCard() {
             if (allSelected) {
               setSelectedKeys(new Set());
             } else {
-              setSelectedKeys(new Set(pendingItems.map((it) => it.external.toLowerCase())));
+              setSelectedKeys(new Set(pendingItems.map((it) => categoryDedupKey(it.external))));
             }
           };
           const setAllSelectedTo = (cat: InternalCategory) => {
@@ -1192,7 +1192,7 @@ export function TransactionsWebhookCard() {
           };
           const handleBulkSave = () => {
             const items = pendingItems
-              .filter((it) => selectedKeys.has(it.external.toLowerCase()))
+              .filter((it) => selectedKeys.has(categoryDedupKey(it.external)))
               .map((it) => ({ external: it.external, internal: getCategory(it) }));
             void saveMappingsBulk(items);
           };
@@ -1296,7 +1296,7 @@ export function TransactionsWebhookCard() {
 
             <ul className="space-y-1.5">
               {unmappedSummary.map((item) => {
-                const key = item.external.toLowerCase();
+                const key = categoryDedupKey(item.external);
                 const persistedAs = justMapped[key];
                 const isSaving = savingMapping === item.external;
                 const isSelected = selectedKeys.has(key);
