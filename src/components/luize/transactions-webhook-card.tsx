@@ -629,8 +629,44 @@ export function TransactionsWebhookCard() {
       return;
     }
     if (items.length === 0) return;
+
+    // Normaliza, descarta inválidos e deduplica por chave canônica (mantém a primeira variação)
+    const seen = new Map<string, { external: string; internal: InternalCategory }>();
+    let invalidCount = 0;
+    let dedupedCount = 0;
+    for (const it of items) {
+      const { value: normalized } = normalizeExternalCategory(it.external);
+      if (!normalized) {
+        invalidCount += 1;
+        continue;
+      }
+      const key = categoryDedupKey(normalized);
+      if (seen.has(key)) {
+        dedupedCount += 1;
+        continue;
+      }
+      // Pula se já houver equivalente persistido e ainda não foi mapeado nesta sessão
+      if (knownMappings.has(key) && !justMapped[key]) {
+        dedupedCount += 1;
+        continue;
+      }
+      seen.set(key, { external: normalized, internal: it.internal });
+    }
+
+    const cleaned = Array.from(seen.entries());
+    if (cleaned.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Nada para salvar",
+        description: invalidCount
+          ? "Nomes de categoria inválidos."
+          : "Todas as variações selecionadas já estão mapeadas.",
+      });
+      return;
+    }
+
     setBulkSaving(true);
-    const rows = items.map((it) => ({
+    const rows = cleaned.map(([, it]) => ({
       user_id: user.id,
       external_category: it.external,
       internal_category: it.internal,
@@ -645,18 +681,21 @@ export function TransactionsWebhookCard() {
     }
     setKnownMappings((s) => {
       const next = new Set(s);
-      for (const it of items) next.add(it.external.toLowerCase());
+      for (const [key] of cleaned) next.add(key);
       return next;
     });
     setJustMapped((m) => {
       const next = { ...m };
-      for (const it of items) next[it.external.toLowerCase()] = it.internal;
+      for (const [key, it] of cleaned) next[key] = it.internal;
       return next;
     });
     setSelectedKeys(new Set());
+    const skipped = invalidCount + dedupedCount;
     toast({
-      title: `${items.length} mapeamento${items.length > 1 ? "s" : ""} salvo${items.length > 1 ? "s" : ""}`,
-      description: "Próximas importações usarão a categoria correta.",
+      title: `${cleaned.length} mapeamento${cleaned.length > 1 ? "s" : ""} salvo${cleaned.length > 1 ? "s" : ""}`,
+      description: skipped > 0
+        ? `${skipped} variação(ões) ignorada(s) por duplicidade ou nome inválido.`
+        : "Próximas importações usarão a categoria correta.",
     });
   };
 
@@ -668,18 +707,21 @@ export function TransactionsWebhookCard() {
       const list = body?.unmapped_categories ?? [];
       for (const ext of list) {
         if (!ext) continue;
-        const key = ext.toLowerCase();
+        const { value: normalized } = normalizeExternalCategory(ext);
+        if (!normalized) continue;
+        const key = categoryDedupKey(normalized);
+        if (!key) continue;
         if (knownMappings.has(key)) continue;
         const existing = seen.get(key);
         if (existing) {
           existing.occurrences += 1;
         } else {
-          seen.set(key, { external: ext, suggested: suggestInternalCategory(ext), occurrences: 1 });
+          seen.set(key, { external: normalized, suggested: suggestInternalCategory(normalized), occurrences: 1 });
         }
       }
     }
     return Array.from(seen.values()).sort((a, b) => b.occurrences - a.occurrences);
-  }, [history, knownMappings]);
+  }, [knownMappings, history]);
 
   const downloadFile = (content: string, filename: string, mime: string) => {
     const blob = new Blob([content], { type: mime });
