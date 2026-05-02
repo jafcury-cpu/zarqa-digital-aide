@@ -21,6 +21,7 @@ const Financeiro = lazy(() => import("./pages/Financeiro.tsx"));
 const Saude = lazy(() => import("./pages/Saude.tsx"));
 const Documentos = lazy(() => import("./pages/Documentos.tsx"));
 const Configuracoes = lazy(() => import("./pages/Configuracoes.tsx"));
+const WebhookLogs = lazy(() => import("./pages/WebhookLogs.tsx"));
 const Contatos = lazy(() => import("./pages/Contatos.tsx"));
 const Comunicacoes = lazy(() => import("./pages/Comunicacoes.tsx"));
 const Erros = lazy(() => import("./pages/Erros.tsx"));
