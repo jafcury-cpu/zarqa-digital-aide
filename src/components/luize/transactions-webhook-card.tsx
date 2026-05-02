@@ -137,6 +137,8 @@ export function TransactionsWebhookCard() {
     [projectId],
   );
 
+  const [replayingId, setReplayingId] = useState<string | null>(null);
+
   const samplePayloadStr = useMemo(() => JSON.stringify(SAMPLE_PAYLOAD, null, 2), []);
 
   const copy = async (value: string, label: string) => {
@@ -148,6 +150,78 @@ export function TransactionsWebhookCard() {
     }
   };
 
+  const newId = () =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+  const sendIngest = async (params: {
+    payload: IngestPayload;
+    upsert: boolean;
+    label: string;
+    replayOfId?: string;
+  }) => {
+    const { payload, upsert, label, replayOfId } = params;
+    const at = new Date().toISOString();
+    const id = newId();
+
+    try {
+      const { data, error } = await supabase.functions.invoke("ingest-transactions", { body: payload });
+      if (error) {
+        const entry: IngestResult = {
+          ok: false,
+          status: 0,
+          body: { error: error.message },
+          label,
+          at,
+          payload,
+          upsert,
+          replayOfId,
+          id,
+        };
+        setHistory((h) => [entry, ...h].slice(0, 5));
+        toast({ variant: "destructive", title: "Falha no teste", description: error.message });
+      } else {
+        const inserted = (data as { inserted?: number })?.inserted ?? 0;
+        const updated = (data as { updated?: number })?.updated ?? 0;
+        const skipped = (data as { skipped?: number })?.skipped ?? 0;
+        const entry: IngestResult = {
+          ok: true,
+          status: 200,
+          body: data,
+          label,
+          at,
+          payload,
+          upsert,
+          replayOfId,
+          id,
+        };
+        setHistory((h) => [entry, ...h].slice(0, 5));
+        toast({
+          title: replayOfId ? "Replay respondeu" : "Webhook respondeu",
+          description: upsert
+            ? `Inseridas ${inserted}, atualizadas ${updated}, ignoradas ${skipped}.`
+            : `Inseridas ${inserted}, ignoradas ${skipped}.`,
+        });
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Erro desconhecido";
+      const entry: IngestResult = {
+        ok: false,
+        status: 0,
+        body: { error: message },
+        label,
+        at,
+        payload,
+        upsert,
+        replayOfId,
+        id,
+      };
+      setHistory((h) => [entry, ...h].slice(0, 5));
+      toast({ variant: "destructive", title: "Falha no teste", description: message });
+    }
+  };
+
   const runTest = async (variant: "sample" | "tesouro") => {
     if (!user) {
       toast({ variant: "destructive", title: "Faça login para testar" });
@@ -155,36 +229,35 @@ export function TransactionsWebhookCard() {
     }
     setTesting(variant);
     const basePayload = variant === "tesouro" ? buildTesouroBrilhantePayload() : SAMPLE_PAYLOAD;
-    const payload = upsertMode ? { ...basePayload, mode: "upsert" } : basePayload;
+    const payload: IngestPayload = upsertMode ? { ...basePayload, mode: "upsert" } : basePayload;
     const label =
       variant === "tesouro"
         ? `Tesouro Brilhante · ${basePayload.transactions.length} txs${upsertMode ? " · upsert" : ""}`
         : `Payload de exemplo${upsertMode ? " · upsert" : ""}`;
-    const at = new Date().toISOString();
-
     try {
-      const { data, error } = await supabase.functions.invoke("ingest-transactions", { body: payload });
-      if (error) {
-        setHistory((h) => [{ ok: false, status: 0, body: { error: error.message }, label, at }, ...h].slice(0, 5));
-        toast({ variant: "destructive", title: "Falha no teste", description: error.message });
-      } else {
-        const inserted = (data as { inserted?: number })?.inserted ?? 0;
-        const updated = (data as { updated?: number })?.updated ?? 0;
-        const skipped = (data as { skipped?: number })?.skipped ?? 0;
-        setHistory((h) => [{ ok: true, status: 200, body: data, label, at }, ...h].slice(0, 5));
-        toast({
-          title: "Webhook respondeu",
-          description: upsertMode
-            ? `Inseridas ${inserted}, atualizadas ${updated}, ignoradas ${skipped}.`
-            : `Inseridas ${inserted}, ignoradas ${skipped}.`,
-        });
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Erro desconhecido";
-      setHistory((h) => [{ ok: false, status: 0, body: { error: message }, label, at }, ...h].slice(0, 5));
-      toast({ variant: "destructive", title: "Falha no teste", description: message });
+      await sendIngest({ payload, upsert: upsertMode, label });
     } finally {
       setTesting(null);
+    }
+  };
+
+  const replayEntry = async (entry: IngestResult) => {
+    if (!user) {
+      toast({ variant: "destructive", title: "Faça login para repetir" });
+      return;
+    }
+    setReplayingId(entry.id);
+    const count = Array.isArray(entry.payload.transactions) ? entry.payload.transactions.length : 0;
+    const label = `↻ Replay · ${count} txs${entry.upsert ? " · upsert" : ""}`;
+    try {
+      await sendIngest({
+        payload: entry.payload,
+        upsert: entry.upsert,
+        label,
+        replayOfId: entry.id,
+      });
+    } finally {
+      setReplayingId(null);
     }
   };
 
