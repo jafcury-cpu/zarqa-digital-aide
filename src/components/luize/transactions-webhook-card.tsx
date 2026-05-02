@@ -45,6 +45,7 @@ export function TransactionsWebhookCard() {
   const { toast } = useToast();
   const [testing, setTesting] = useState(false);
   const [result, setResult] = useState<IngestResult | null>(null);
+  const [upsertMode, setUpsertMode] = useState(false);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID as string | undefined;
   const endpointUrl = useMemo(
