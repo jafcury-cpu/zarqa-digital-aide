@@ -232,6 +232,12 @@ export function TransactionsWebhookCard() {
   const [justMapped, setJustMapped] = useState<Record<string, InternalCategory>>({});
   // Categoria externa atualmente sendo persistida — evita cliques duplos
   const [savingMapping, setSavingMapping] = useState<string | null>(null);
+  // Modo seleção múltipla: permite salvar vários mapeamentos de uma vez
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
+  // Overrides controlam a categoria escolhida por linha (usado em ambos os modos)
+  const [overrides, setOverrides] = useState<Record<string, InternalCategory>>({});
+  const [bulkSaving, setBulkSaving] = useState(false);
 
   useEffect(() => {
     if (!user) return;
