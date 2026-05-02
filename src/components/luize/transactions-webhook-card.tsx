@@ -100,11 +100,7 @@ export function TransactionsWebhookCard() {
     <SectionCard
       title="Webhook de Transações"
       description="Importe ou reconcilie transações do Tesouro Brilhante, n8n, Zapier ou qualquer backend"
-      eyebrow={
-        <span className="inline-flex items-center gap-1.5">
-          <Webhook className="size-3.5" /> Integração financeira
-        </span>
-      }
+      eyebrow="Integração financeira"
     >
       <div className="space-y-5">
         {/* Endpoint */}
