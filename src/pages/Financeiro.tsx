@@ -20,6 +20,7 @@ import { BankAccountFormDialog } from "@/components/luize/bank-account-form-dial
 import { CreditCardFormDialog } from "@/components/luize/credit-card-form-dialog";
 import { ReconciliationFormDialog } from "@/components/luize/reconciliation-form-dialog";
 import { UpcomingBillsTimeline } from "@/components/luize/upcoming-bills-timeline";
+import { ReconciliationOverview } from "@/components/luize/reconciliation-overview";
 import {
   formatCurrency,
   formatDate,
