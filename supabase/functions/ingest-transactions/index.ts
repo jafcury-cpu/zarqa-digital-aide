@@ -226,6 +226,7 @@ async function logCall(
     auth_mode: string;
     status_code: number;
     inserted_count: number;
+    updated_count: number;
     skipped_count: number;
     rejected_count: number;
     total_received: number;
@@ -243,6 +244,7 @@ async function logCall(
       auth_mode: entry.auth_mode,
       status_code: entry.status_code,
       inserted_count: entry.inserted_count,
+      updated_count: entry.updated_count,
       skipped_count: entry.skipped_count,
       rejected_count: entry.rejected_count,
       total_received: entry.total_received,
