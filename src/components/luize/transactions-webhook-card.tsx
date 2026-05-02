@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Copy,
@@ -11,16 +11,22 @@ import {
   RotateCw,
   ArrowRight,
   Download,
+  Code2,
+  Eraser,
+  Save,
 } from "lucide-react";
 import { SectionCard } from "@/components/luize/section-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/components/auth/auth-provider";
+
+const CUSTOM_PAYLOAD_STORAGE_KEY = "luize:webhook:custom-payload";
 
 const SAMPLE_PAYLOAD = {
   transactions: [
