@@ -72,18 +72,22 @@ export function TransactionsWebhookCard() {
     setTesting(true);
     setResult(null);
     try {
-      const { data, error } = await supabase.functions.invoke("ingest-transactions", {
-        body: SAMPLE_PAYLOAD,
-      });
+      const body = upsertMode
+        ? { ...SAMPLE_PAYLOAD, mode: "upsert" }
+        : SAMPLE_PAYLOAD;
+      const { data, error } = await supabase.functions.invoke("ingest-transactions", { body });
       if (error) {
         setResult({ ok: false, status: 0, body: { error: error.message } });
         toast({ variant: "destructive", title: "Falha no teste", description: error.message });
       } else {
         const inserted = (data as { inserted?: number })?.inserted ?? 0;
+        const updated = (data as { updated?: number })?.updated ?? 0;
         setResult({ ok: true, status: 200, body: data });
         toast({
           title: "Webhook respondeu",
-          description: `Inseridas ${inserted} transação(ões) de exemplo.`,
+          description: upsertMode
+            ? `Inseridas ${inserted}, atualizadas ${updated}.`
+            : `Inseridas ${inserted} transação(ões) de exemplo.`,
         });
       }
     } catch (err) {
@@ -95,10 +99,12 @@ export function TransactionsWebhookCard() {
     }
   };
 
-  const curlExample = `curl -X POST '${endpointUrl}' \\
+  const curlPayload = upsertMode ? { ...SAMPLE_PAYLOAD, mode: "upsert" } : SAMPLE_PAYLOAD;
+  const curlEndpoint = upsertMode ? `${endpointUrl}?upsert=true` : endpointUrl;
+  const curlExample = `curl -X POST '${curlEndpoint}' \\
   -H 'Authorization: Bearer <SEU_JWT>' \\
   -H 'Content-Type: application/json' \\
-  -d '${JSON.stringify(SAMPLE_PAYLOAD)}'`;
+  -d '${JSON.stringify(curlPayload)}'`;
 
   return (
     <SectionCard
