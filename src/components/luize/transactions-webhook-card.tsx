@@ -10,6 +10,7 @@ import {
   History,
   RotateCw,
   ArrowRight,
+  Download,
 } from "lucide-react";
 import { SectionCard } from "@/components/luize/section-card";
 import { Button } from "@/components/ui/button";
