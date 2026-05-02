@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -49,16 +49,13 @@ function jsonResponse(body: unknown, status = 200) {
 function normalizeDate(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
-  // YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return trimmed;
-  // DD/MM/YYYY ou DD/MM/YY
   const br = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{2,4})$/);
   if (br) {
     const [, d, m, y] = br;
     const year = y.length === 2 ? `20${y}` : y;
     return `${year}-${m}-${d}`;
   }
-  // ISO completo
   const parsed = new Date(trimmed);
   if (!Number.isNaN(parsed.getTime())) {
     return parsed.toISOString().slice(0, 10);
@@ -69,7 +66,6 @@ function normalizeDate(value: unknown): string | null {
 function normalizeAmount(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string") {
-    // "1.234,56" ou "1234.56" ou "-R$ 1.234,56"
     const cleaned = value
       .replace(/[R$\s]/g, "")
       .replace(/\.(?=\d{3}(\D|$))/g, "")
@@ -107,59 +103,125 @@ function normalizeTransaction(raw: IncomingTransaction): { ok: true; tx: Normali
   return { ok: true, tx: { description, amount, date, category, status, external_id, source } };
 }
 
+async function logCall(
+  serviceClient: SupabaseClient,
+  entry: {
+    user_id: string | null;
+    source: string;
+    auth_mode: string;
+    status_code: number;
+    inserted_count: number;
+    skipped_count: number;
+    rejected_count: number;
+    total_received: number;
+    error_message: string | null;
+    rejected_details: unknown;
+    request_id: string;
+    duration_ms: number;
+  },
+) {
+  if (!entry.user_id) return;
+  try {
+    await serviceClient.from("ingest_logs").insert({
+      user_id: entry.user_id,
+      source: entry.source,
+      auth_mode: entry.auth_mode,
+      status_code: entry.status_code,
+      inserted_count: entry.inserted_count,
+      skipped_count: entry.skipped_count,
+      rejected_count: entry.rejected_count,
+      total_received: entry.total_received,
+      error_message: entry.error_message,
+      rejected_details: entry.rejected_details ?? [],
+      request_id: entry.request_id,
+      duration_ms: entry.duration_ms,
+    });
+  } catch (err) {
+    console.error("[ingest-transactions] failed to write ingest_logs", err);
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   if (req.method !== "POST") return jsonResponse({ error: "Method not allowed" }, 405);
+
+  const startedAt = Date.now();
+  const requestId = crypto.randomUUID();
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const sharedApiKey = Deno.env.get("LUIZE_INGEST_API_KEY") ?? null;
 
-  // === Autenticação: dois modos ===
-  // 1) JWT do usuário (frontend logado) → respeita RLS automaticamente.
-  // 2) X-Luize-Api-Key + X-Luize-User-Id (sistema externo: Tesouro Brilhante, n8n, Zapier).
+  // Cliente service role usado SOMENTE para gravar audit log (ingest_logs).
+  const auditClient = createClient(supabaseUrl, serviceKey);
+
   let userId: string | null = null;
-  let dbClient;
+  let authMode = "unknown";
+  let dbClient: SupabaseClient;
 
   const authHeader = req.headers.get("Authorization");
   const apiKeyHeader = req.headers.get("x-luize-api-key");
   const externalUserId = req.headers.get("x-luize-user-id");
 
+  const finish = async (
+    body: Record<string, unknown>,
+    status: number,
+    counts: { inserted: number; skipped: number; rejected: number; total: number; error: string | null; rejectedDetails: unknown; sourceLabel: string },
+  ) => {
+    await logCall(auditClient, {
+      user_id: userId,
+      source: counts.sourceLabel,
+      auth_mode: authMode,
+      status_code: status,
+      inserted_count: counts.inserted,
+      skipped_count: counts.skipped,
+      rejected_count: counts.rejected,
+      total_received: counts.total,
+      error_message: counts.error,
+      rejected_details: counts.rejectedDetails,
+      request_id: requestId,
+      duration_ms: Date.now() - startedAt,
+    });
+    return jsonResponse({ ...body, request_id: requestId }, status);
+  };
+
   if (authHeader?.startsWith("Bearer ") && !apiKeyHeader) {
+    authMode = "jwt";
     const client = createClient(supabaseUrl, anonKey, {
       global: { headers: { Authorization: authHeader } },
     });
     const { data: { user }, error } = await client.auth.getUser();
-    if (error || !user) return jsonResponse({ error: "JWT inválido ou expirado" }, 401);
+    if (error || !user) {
+      return jsonResponse({ error: "JWT inválido ou expirado", request_id: requestId }, 401);
+    }
     userId = user.id;
     dbClient = client;
   } else if (apiKeyHeader && externalUserId) {
+    authMode = "api_key";
     if (!sharedApiKey) {
-      return jsonResponse({ error: "LUIZE_INGEST_API_KEY não configurada no servidor" }, 503);
+      return jsonResponse({ error: "LUIZE_INGEST_API_KEY não configurada no servidor", request_id: requestId }, 503);
     }
     if (apiKeyHeader !== sharedApiKey) {
-      return jsonResponse({ error: "API key inválida" }, 401);
+      return jsonResponse({ error: "API key inválida", request_id: requestId }, 401);
     }
     if (!/^[0-9a-f-]{36}$/i.test(externalUserId)) {
-      return jsonResponse({ error: "x-luize-user-id deve ser um UUID" }, 400);
+      return jsonResponse({ error: "x-luize-user-id deve ser um UUID", request_id: requestId }, 400);
     }
     userId = externalUserId;
-    // Service role bypassa RLS — escopamos manualmente por user_id na inserção.
     dbClient = createClient(supabaseUrl, serviceKey);
   } else {
     return jsonResponse(
-      { error: "Forneça Authorization: Bearer <jwt> OU os headers X-Luize-Api-Key + X-Luize-User-Id" },
+      { error: "Forneça Authorization: Bearer <jwt> OU os headers X-Luize-Api-Key + X-Luize-User-Id", request_id: requestId },
       401,
     );
   }
 
-  // === Parse + validação do payload ===
   let payload: unknown;
   try {
     payload = await req.json();
   } catch {
-    return jsonResponse({ error: "JSON inválido" }, 400);
+    return finish({ error: "JSON inválido" }, 400, { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "JSON inválido", rejectedDetails: [], sourceLabel: "webhook" });
   }
 
   const list = Array.isArray(payload)
@@ -169,10 +231,10 @@ serve(async (req) => {
       : null;
 
   if (!list || list.length === 0) {
-    return jsonResponse({ error: "Envie um array de transactions ou { transactions: [...] }" }, 400);
+    return finish({ error: "Envie um array de transactions ou { transactions: [...] }" }, 400, { inserted: 0, skipped: 0, rejected: 0, total: 0, error: "payload vazio", rejectedDetails: [], sourceLabel: "webhook" });
   }
   if (list.length > 500) {
-    return jsonResponse({ error: "Máximo de 500 transações por chamada" }, 413);
+    return finish({ error: "Máximo de 500 transações por chamada" }, 413, { inserted: 0, skipped: 0, rejected: 0, total: list.length, error: "excedeu 500", rejectedDetails: [], sourceLabel: "webhook" });
   }
 
   const accepted: NormalizedTransaction[] = [];
@@ -183,11 +245,17 @@ serve(async (req) => {
     else rejected.push({ index, error: result.error });
   });
 
+  // Rótulo de origem para o log: pega do primeiro item válido se existir.
+  const sourceLabel = accepted[0]?.source ?? "webhook";
+
   if (accepted.length === 0) {
-    return jsonResponse({ error: "Nenhuma transação válida", rejected }, 422);
+    return finish(
+      { error: "Nenhuma transação válida", rejected },
+      422,
+      { inserted: 0, skipped: 0, rejected: rejected.length, total: list.length, error: "todas inválidas", rejectedDetails: rejected, sourceLabel },
+    );
   }
 
-  // === Deduplicação por external_id (quando fornecido) ===
   const externalIds = accepted.map((t) => t.external_id).filter((v): v is string => !!v);
   let existingExternalIds = new Set<string>();
   if (externalIds.length > 0) {
@@ -206,7 +274,11 @@ serve(async (req) => {
   const skipped = accepted.length - toInsert.length;
 
   if (toInsert.length === 0) {
-    return jsonResponse({ inserted: 0, skipped, rejected, message: "Todas as transações já existiam (external_id)" });
+    return finish(
+      { inserted: 0, skipped, rejected, message: "Todas as transações já existiam (external_id)" },
+      200,
+      { inserted: 0, skipped, rejected: rejected.length, total: list.length, error: null, rejectedDetails: rejected, sourceLabel },
+    );
   }
 
   const { data: inserted, error: insertError } = await dbClient
@@ -216,13 +288,21 @@ serve(async (req) => {
 
   if (insertError) {
     console.error("[ingest-transactions] insert error", insertError);
-    return jsonResponse({ error: insertError.message, rejected }, 500);
+    return finish(
+      { error: insertError.message, rejected },
+      500,
+      { inserted: 0, skipped, rejected: rejected.length, total: list.length, error: insertError.message, rejectedDetails: rejected, sourceLabel },
+    );
   }
 
-  return jsonResponse({
-    inserted: inserted?.length ?? 0,
-    skipped,
-    rejected,
-    ids: inserted?.map((r: { id: string }) => r.id) ?? [],
-  });
+  return finish(
+    {
+      inserted: inserted?.length ?? 0,
+      skipped,
+      rejected,
+      ids: inserted?.map((r: { id: string }) => r.id) ?? [],
+    },
+    200,
+    { inserted: inserted?.length ?? 0, skipped, rejected: rejected.length, total: list.length, error: null, rejectedDetails: rejected, sourceLabel },
+  );
 });
