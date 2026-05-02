@@ -545,7 +545,7 @@ const Financeiro = () => {
       {/* Row 2: KPI metrics */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {metrics.map((item) => (
-          <div key={item.label} className="rounded-2xl border border-border bg-panel p-5">
+          <div key={item.label} className="finance-stripe rounded-2xl border border-border bg-panel p-5 pl-6">
             <p className="text-sm text-muted-foreground">{item.label}</p>
             <p className="mt-2 font-display text-3xl text-foreground">{item.value}</p>
             <span className={`mt-3 inline-flex rounded-full px-3 py-1 text-xs font-semibold ${toneStyles[item.tone]}`}>
