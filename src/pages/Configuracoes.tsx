@@ -34,6 +34,7 @@ import {
   pushDebug,
   setDebugModeEnabled,
 } from "@/lib/debug-mode";
+import { TransactionsWebhookCard } from "@/components/luize/transactions-webhook-card";
 
 function validateWebhookUrl(value: string) {
   if (!value.trim()) return null;
@@ -433,6 +434,10 @@ const Configuracoes = () => {
           </div>
         </div>
       </SectionCard>
+
+      <div className="xl:col-span-2">
+        <TransactionsWebhookCard />
+      </div>
     </div>
   );
 };
