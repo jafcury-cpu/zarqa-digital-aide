@@ -193,10 +193,11 @@ const WebhookLogs = () => {
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-5">
+      <div className="grid gap-3 md:grid-cols-6">
         {[
           { label: "Chamadas", value: stats.calls },
           { label: "Inseridas", value: stats.inserted, tone: "text-success" },
+          { label: "Atualizadas", value: stats.updated, tone: "text-secondary" },
           { label: "Ignoradas (dup)", value: stats.skipped, tone: "text-muted-foreground" },
           { label: "Rejeitadas", value: stats.rejected, tone: "text-warning" },
           { label: "Com erro", value: stats.errors, tone: "text-destructive" },
