@@ -139,12 +139,13 @@ const WebhookLogs = () => {
       (acc, l) => {
         acc.calls += 1;
         acc.inserted += l.inserted_count;
+        acc.updated += l.updated_count ?? 0;
         acc.skipped += l.skipped_count;
         acc.rejected += l.rejected_count;
         if (classifyStatus(l) === "error") acc.errors += 1;
         return acc;
       },
-      { calls: 0, inserted: 0, skipped: 0, rejected: 0, errors: 0 },
+      { calls: 0, inserted: 0, updated: 0, skipped: 0, rejected: 0, errors: 0 },
     );
   }, [logs]);
 
